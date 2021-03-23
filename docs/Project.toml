@@ -1,0 +1,3 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+SafeBluesCampusSimulation = "449a2304-e5ac-4818-88ed-161a12becd0a"
