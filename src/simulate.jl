@@ -1,6 +1,6 @@
 using Random: AbstractRNG, Random.GLOBAL_RNG
 
-using Distributions: Binomial, Discrete, Sampleable, Univariate
+using Distributions: Binomial, Discrete, Gamma, Sampleable, Univariate
 using FileIO: load
 using Images: Gray
 using YAML: load_file
@@ -16,16 +16,18 @@ mutable struct State
     susceptible::Int
     infected::Int
     recovered::Int
+    recovery_times::Vector{Float64}
 end
 
 function State(susceptible::Int, infected::Int, recovered::Int)
-    return State(0, susceptible, infected, recovered)
+    return State(0, susceptible, infected, recovered, [])
 end
 
 struct Strain
     strength::Float64
     radius::Float64
-    duration::Float64
+    recovery_shape::Float64
+    recovery_scale::Float64
 end
 
 struct CampusSampler <: Sampleable{Univariate, Discrete}
@@ -101,7 +103,7 @@ function load_environment(environment_file::String, heatmap_file::String)
     )
 end
 
-function infect(rng::AbstractRNG, state::State, strain::Strain, environment::Environment)
+function infect!(rng::AbstractRNG, state::State, strain::Strain, environment::Environment)
     # Get the activity (attendance & compliance) probability.
     active_chance = (
         is_weekend(state.time) ? environment.weekend_attendance
@@ -134,24 +136,45 @@ function infect(rng::AbstractRNG, state::State, strain::Strain, environment::Env
         # Determine whether an infection occurs.
         if rand(rng) < p
             infections += 1
+
+            # Add the newly infected person's recovery time to the recovery queue.
+            t = state.time + rand(Gamma(strain.recovery_shape, strain.recovery_scale))
+            i = 1
+            while i <= length(state.recovery_times)
+                if t < state.recovery_times[i]
+                    break
+                end
+                i += 1
+            end
+            insert!(state.recovery_times, i, t)
         end
     end
 
+    state.susceptible -= infections
+    state.infected += infections
     return infections
 end
 
-function recover(rng::AbstractRNG, state::State, strain::Strain)
-    return rand(rng, Binomial(state.infected, 1 - exp(-1 / strain.duration)))
+function recover!(rng::AbstractRNG, state::State, strain::Strain)
+    recoveries = 0
+    for t in state.recovery_times
+        if t > state.time
+            break
+        end
+
+        popfirst!(state.recovery_times)
+        recoveries += 1
+    end
+
+    state.infected -= recoveries
+    state.recovered += recoveries
+    return recoveries
 end
 
 function advance!(rng::AbstractRNG, state::State, strain::Strain, environment::Environment)
-    infections = infect(rng, state, strain, environment)
-    recoveries = recover(rng, state, strain)
-
     state.time += 1
-    state.susceptible -= infections
-    state.infected += infections - recoveries
-    state.recovered += recoveries
+    infect!(rng, state, strain, environment)
+    recover!(rng, state, strain)
 
     return (
         susceptible=state.susceptible, infected=state.infected, recovered=state.recovered
