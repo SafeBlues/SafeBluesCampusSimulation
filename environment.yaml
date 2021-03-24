@@ -1,0 +1,53 @@
+time_horizon: 840
+scale: 3.0
+weekday_attendance:
+  - 0.0  # 12am -  1am
+  - 0.0  #  1am -  2am
+  - 0.0  #  2am -  3am
+  - 0.0  #  3am -  4am
+  - 0.0  #  4am -  5am
+  - 0.0  #  5am -  6am
+  - 0.0  #  6am -  7am
+  - 0.0  #  7am -  8am
+  - 0.5  #  8am -  9am
+  - 0.5  #  9am - 10am
+  - 0.5  # 10am - 11am
+  - 0.5  # 11am - 12pm
+  - 0.5  # 12pm -  1pm
+  - 0.5  #  1pm -  2pm
+  - 0.5  #  2pm -  3pm
+  - 0.5  #  3pm -  4pm
+  - 0.5  #  4pm -  5pm
+  - 0.5  #  5pm -  6pm
+  - 0.0  #  6pm -  7pm
+  - 0.0  #  7pm -  8pm
+  - 0.0  #  8pm -  9pm
+  - 0.0  #  9pm - 10pm
+  - 0.0  # 10pm - 11pm
+  - 0.0  # 11pm - 12am
+weekend_attendance:
+  - 0.0  # 12am -  1am
+  - 0.0  #  1am -  2am
+  - 0.0  #  2am -  3am
+  - 0.0  #  3am -  4am
+  - 0.0  #  4am -  5am
+  - 0.0  #  5am -  6am
+  - 0.0  #  6am -  7am
+  - 0.0  #  7am -  8am
+  - 0.0  #  8am -  9am
+  - 0.0  #  9am - 10am
+  - 0.0  # 10am - 11am
+  - 0.0  # 11am - 12pm
+  - 0.0  # 12pm -  1pm
+  - 0.0  #  1pm -  2pm
+  - 0.0  #  2pm -  3pm
+  - 0.0  #  3pm -  4pm
+  - 0.0  #  4pm -  5pm
+  - 0.0  #  5pm -  6pm
+  - 0.0  #  6pm -  7pm
+  - 0.0  #  7pm -  8pm
+  - 0.0  #  8pm -  9pm
+  - 0.0  #  9pm - 10pm
+  - 0.0  # 10pm - 11pm
+  - 0.0  # 11pm - 12am
+compliance: 0.5
