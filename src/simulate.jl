@@ -103,6 +103,10 @@ function load_environment(environment_file::String, heatmap_file::String)
     )
 end
 
+const GLOBAL_ENVIRONMENT = cd(@__DIR__) do
+    return load_environment("../environment.yaml", "../heatmap.png")
+end
+
 function infect!(rng::AbstractRNG, state::State, strain::Strain, environment::Environment)
     # Get the activity (attendance & compliance) probability.
     active_chance = (
@@ -199,4 +203,12 @@ end
 
 function simulate!(state::State, strain::Strain, environment::Environment)
     return simulate!(GLOBAL_RNG, state, strain, environment)
+end
+
+function simulate!(rng::AbstractRNG, state::State, strain::Strain)
+    return simulate!(rng, state, strain, GLOBAL_ENVIRONMENT)
+end
+
+function simulate!(state::State, strain::Strain)
+    return simulate!(GLOBAL_RNG, state, strain, GLOBAL_ENVIRONMENT)
 end
