@@ -122,7 +122,7 @@ Returns a randomly generated position of an individual on campus.
 - `rng::AbstractRNG`: A random number generator.
 - `sampler::CampusSampler`: A sampler describing the distribution of positions on campus.
 """
-function Base.rand(rng::AbstractRNG, s::CampusSampler)
+function Base.rand(rng::AbstractRNG, sampler::CampusSampler)
     u = sampler.width * sampler.height * rand(rng)
     index = Int(floor(u)) + 1
 
@@ -139,12 +139,11 @@ function Base.rand(rng::AbstractRNG, s::CampusSampler)
 end
 
 """
-    Environment(time_horizon, campus_sampler, weekday_attendance, weekend_attendance, compliance)
+    Environment(campus_sampler, weekday_attendance, weekend_attendance, compliance)
 
 Stores the population dynamics of a campus.
 
 **Fields**
-- `time_horizon::Int`: The number of time periods (in hours) to simulate.
 - `campus_sampler::CampusSampler`: Generates the positions of individuals on campus.
 - `weekday_attendance::Vector{Float64}`: The attendance probabilities for each hour of a
     weekday.
@@ -153,7 +152,6 @@ Stores the population dynamics of a campus.
 - `compliance::Float64`: The probability that an individual is running the Safe Blues app.
 """
 struct Environment
-    time_horizon::Int
     campus_sampler::CampusSampler
     weekday_attendance::Vector{Float64}
     weekend_attendance::Vector{Float64}
@@ -172,7 +170,6 @@ Loads an `Environment` from an environment configuration and a campus heatmap.
 function load_environment(environment_file::String, heatmap_file::String)
     contents = load_file(environment_file)
 
-    time_horizon::Int = contents["time_horizon"]
     scale::Float64 = contents["scale"]
     weekday_attendance::Vector{Float64} = contents["weekday_attendance"]
     weekend_attendance::Vector{Float64} = contents["weekend_attendance"]
@@ -181,9 +178,7 @@ function load_environment(environment_file::String, heatmap_file::String)
     weights = (x -> Float64(Gray(x))).(load(heatmap_file))
     campus_sampler = CampusSampler(scale, weights)
 
-    return Environment(
-        time_horizon, campus_sampler, weekday_attendance, weekend_attendance, compliance
-    )
+    return Environment(campus_sampler, weekday_attendance, weekend_attendance, compliance)
 end
 
 const GLOBAL_ENVIRONMENT = cd(@__DIR__) do
@@ -310,7 +305,7 @@ function advance!(rng::AbstractRNG, state::State, strain::Strain, environment::E
 end
 
 """
-    simulate!(rng, state, strain, environment)
+    simulate!(rng, time_steps, state, strain, environment)
 
 Simulates the spread of a virus strain within a population.
 
@@ -319,25 +314,32 @@ Returns a `NamedTuple` storing the number number of susceptible (`.susceptible`)
 
 **Arguments**
 - `rng::AbstractRNG`: A random number generator.
+- `time_steps::Integer`: The number of time steps within the simulation.
 - `state::State`: The initial state of the strain.
 - `strain::Strain`: Stores the parameters describing the virus strain.
 - `environment::Environment`: Stores the population dynamics of the campus.
 
 
-    simulate!(state, strain, environment)
-    simulate!(rng, state, strain)
-    simulate!(state, strain)
+    simulate!(time_steps, state, strain, environment)
+    simulate!(rng, time_steps, state, strain)
+    simulate!(time_steps, state, strain)
 
 Alternatively, when `rng` is ommited the random number generator defaults to
 `Random.GLOBAL_RNG` and when `environment` is ommited the environment defaults to
 `GLOBAL_ENVIRONMENT`.
 """
-function simulate!(rng::AbstractRNG, state::State, strain::Strain, environment::Environment)
-    susceptible = zeros(Int, environment.time_horizon)
-    infected = zeros(Int, environment.time_horizon)
-    recovered = zeros(Int, environment.time_horizon)
+function simulate!(
+    rng::AbstractRNG,
+    time_steps::Integer,
+    state::State,
+    strain::Strain,
+    environment::Environment
+)
+    susceptible = zeros(Int, time_steps)
+    infected = zeros(Int, time_steps)
+    recovered = zeros(Int, time_steps)
 
-    for i in 1:environment.time_horizon
+    for i in 1:time_steps
         data = advance!(rng, state, strain, environment)
 
         susceptible[i] = data.susceptible
@@ -348,14 +350,19 @@ function simulate!(rng::AbstractRNG, state::State, strain::Strain, environment::
     return (susceptible=susceptible, infected=infected, recovered=recovered)
 end
 
-function simulate!(state::State, strain::Strain, environment::Environment)
-    return simulate!(GLOBAL_RNG, state, strain, environment)
+function simulate!(
+    time_steps::Integer,
+    state::State,
+    strain::Strain,
+    environment::Environment
+)
+    return simulate!(GLOBAL_RNG, time_steps, state, strain, environment)
 end
 
-function simulate!(rng::AbstractRNG, state::State, strain::Strain)
-    return simulate!(rng, state, strain, GLOBAL_ENVIRONMENT)
+function simulate!(rng::AbstractRNG, time_steps::Integer, state::State, strain::Strain)
+    return simulate!(rng, time_steps, state, strain, GLOBAL_ENVIRONMENT)
 end
 
-function simulate!(state::State, strain::Strain)
-    return simulate!(GLOBAL_RNG, state, strain, GLOBAL_ENVIRONMENT)
+function simulate!(time_steps::Integer, state::State, strain::Strain)
+    return simulate!(GLOBAL_RNG, time_steps, state, strain, GLOBAL_ENVIRONMENT)
 end
