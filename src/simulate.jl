@@ -252,7 +252,7 @@ function infect!(rng::AbstractRNG, state::State, strain::Strain, environment::En
 end
 
 """
-    recover!(rng, state)
+    recover!(state)
 
 Handles the recoveries within the population.
 
@@ -260,10 +260,9 @@ Returns the number of new recoveries and updates `state` to reflect the new epid
 of the strain.
 
 **Arguments**
-- `rng::AbstractRNG`: A random number generator.
 - `state::State`: The initial state of the strain.
 """
-function recover!(rng::AbstractRNG, state::State, strain::Strain)
+function recover!(state::State)
     recoveries = 0
     for t in state.recovery_times
         if t > state.time
@@ -296,7 +295,7 @@ epidemic state of the virus.
 """
 function advance!(rng::AbstractRNG, state::State, strain::Strain, environment::Environment)
     infect!(rng, state, strain, environment)
-    recover!(rng, state, strain)
+    recover!(state)
     state.time += 1
 
     return (
