@@ -234,7 +234,7 @@ function infect!(rng::AbstractRNG, state::State, strain::Strain, environment::En
             infections += 1
 
             # Add the newly infected person's recovery time to the recovery queue.
-            t = state.time + rand(Gamma(strain.recovery_shape, strain.recovery_scale))
+            t = state.time + rand(rng, Gamma(strain.recovery_shape, strain.recovery_scale))
             i = 1
             while i <= length(state.recovery_times)
                 if t < state.recovery_times[i]
@@ -305,64 +305,98 @@ function advance!(rng::AbstractRNG, state::State, strain::Strain, environment::E
 end
 
 """
-    simulate!(rng, time_steps, state, strain, environment)
+    simulate(rngs, time_steps, state, strain, environment)
 
 Simulates the spread of a virus strain within a population.
 
 Returns a `NamedTuple` storing the number number of susceptible (`.susceptible`), infected
-(`.infected`), and recovered (`.recovered`) individuals at every time step.
+(`.infected`), and recovered (`.recovered`) individuals at every time step in every trial.
 
 **Arguments**
-- `rng::AbstractRNG`: A random number generator.
+- `rngs::Vector{AbstractRNG}`: A random number generator for each simulation trial.
 - `time_steps::Integer`: The number of time steps within the simulation.
 - `state::State`: The initial state of the strain.
 - `strain::Strain`: Stores the parameters describing the virus strain.
 - `environment::Environment`: Stores the population dynamics of the campus.
 
 
-    simulate!(time_steps, state, strain, environment)
-    simulate!(rng, time_steps, state, strain)
-    simulate!(time_steps, state, strain)
+    simulate(time_steps, state, strain, environment)
+    simulate(rngs, time_steps, state, strain)
+    simulate(time_steps, state, strain)
 
-Alternatively, when `rng` is ommited the random number generator defaults to
-`Random.GLOBAL_RNG` and when `environment` is ommited the environment defaults to
+Alternatively, when `rngs` is ommited the random number generators default to
+`[Random.GLOBAL_RNG]` and when `environment` is ommited the environment defaults to
 `GLOBAL_ENVIRONMENT`.
+
+
+    simulate(rng, time_steps, state, strain, environment)
+    simulate(rng, time_steps, state, strain)
+
+If only a single random number generator `rng::AbstractRNG` is passed to `simulate`, then
+the simulation will be run exactly once.
 """
-function simulate!(
+function simulate(
+    rngs::Vector{T},
+    time_steps::Integer,
+    state::State,
+    strain::Strain,
+    environment::Environment
+) where T <: AbstractRNG
+    trials = length(rngs)
+    susceptible = zeros(Int, time_steps, trials)
+    infected = zeros(Int, time_steps, trials)
+    recovered = zeros(Int, time_steps, trials)
+
+    for i in 1:trials
+        trial_state = State(
+            state.time, state.susceptible, state.infected, state.recovered,
+            copy(state.recovery_times)
+        )
+
+        for j in 1:time_steps
+            data = advance!(rngs[i], trial_state, strain, environment)
+
+            susceptible[j, i] = data.susceptible
+            infected[j, i] = data.infected
+            recovered[j, i] = data.recovered
+        end
+    end
+
+    return (susceptible=susceptible, infected=infected, recovered=recovered)
+end
+
+function simulate(
+    time_steps::Integer,
+    state::State,
+    strain::Strain,
+    environment::Environment
+)
+    return simulate([GLOBAL_RNG], time_steps, state, strain, environment)
+end
+
+function simulate(
+    rngs::Vector{T},
+    time_steps::Integer,
+    state::State,
+    strain::Strain
+) where T <: AbstractRNG
+    return simulate(rngs, time_steps, state, strain, GLOBAL_ENVIRONMENT)
+end
+
+function simulate(time_steps::Integer, state::State, strain::Strain)
+    return simulate([GLOBAL_RNG], time_steps, state, strain, GLOBAL_ENVIRONMENT)
+end
+
+function simulate(
     rng::AbstractRNG,
     time_steps::Integer,
     state::State,
     strain::Strain,
     environment::Environment
 )
-    susceptible = zeros(Int, time_steps)
-    infected = zeros(Int, time_steps)
-    recovered = zeros(Int, time_steps)
-
-    for i in 1:time_steps
-        data = advance!(rng, state, strain, environment)
-
-        susceptible[i] = data.susceptible
-        infected[i] = data.infected
-        recovered[i] = data.recovered
-    end
-
-    return (susceptible=susceptible, infected=infected, recovered=recovered)
+    return simulate([rng], time_steps, state, strain, environment)
 end
 
-function simulate!(
-    time_steps::Integer,
-    state::State,
-    strain::Strain,
-    environment::Environment
-)
-    return simulate!(GLOBAL_RNG, time_steps, state, strain, environment)
-end
-
-function simulate!(rng::AbstractRNG, time_steps::Integer, state::State, strain::Strain)
-    return simulate!(rng, time_steps, state, strain, GLOBAL_ENVIRONMENT)
-end
-
-function simulate!(time_steps::Integer, state::State, strain::Strain)
-    return simulate!(GLOBAL_RNG, time_steps, state, strain, GLOBAL_ENVIRONMENT)
+function simulate(rng::AbstractRNG, time_steps::Integer, state::State, strain::Strain)
+    return simulate([rng], time_steps, state, strain, GLOBAL_ENVIRONMENT)
 end
