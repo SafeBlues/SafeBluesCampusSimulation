@@ -124,14 +124,14 @@ Returns a randomly generated position of an individual on campus.
 """
 function Base.rand(rng::AbstractRNG, sampler::CampusSampler)
     u = sampler.rows * sampler.columns * rand(rng)
-    index = Int(floor(u)) + 1
+    k = Int(floor(u)) + 1
 
-    if u - index + 1 >= sampler.probabilities[index]
-        index = sampler.aliases[index]
+    if u - k + 1 >= sampler.probabilities[k]
+        k = sampler.aliases[k]
     end
 
-    x = sampler.scale * (((index - 1) % sampler.rows) + rand(rng))
-    y = sampler.scale * (((index - 1) ÷ sampler.rows) + rand(rng))
+    x = sampler.scale * (((k - 1) % sampler.rows) + rand(rng))
+    y = sampler.scale * (((k - 1) ÷ sampler.rows) + rand(rng))
 
     return (x=x, y=y)
 end
@@ -184,6 +184,52 @@ const GLOBAL_ENVIRONMENT = cd(@__DIR__) do
 end
 
 """
+    schedule_recovery!(rng, state, strain)
+
+Generates the recovery time of a newly infected individual.
+
+Inserts the new recovery time into `state.recovery_times` while maintaining an ascending
+ordering.
+
+**Arguments**
+- `rng::AbstractRNG`: A random number generator.
+- `state::State`: The epidemic state of the strain.
+- `strain::Strain`: Stores the parameters describing the virus strain.
+"""
+function schedule_recovery!(rng::AbstractRNG, state::State, strain::Strain)
+    time = state.time + rand(rng, Gamma(strain.recovery_shape, strain.recovery_scale))
+    
+    # Insert the recovery time while maintaining the order.
+    for k in 1:length(state.recovery_times)
+        if time < state.recovery_times[k]
+            insert!(state.recovery_times, k, time)
+            return
+        end
+    end
+    push!(state.recovery_times, time)
+
+    return state
+end
+
+"""
+    initialise(rng, state, strain)
+
+Initialises a `State` variable by generating missing recovery times.
+
+**Arguments:
+- `rng::AbstractRNG`: A random number generator.
+- `state::State`: The epidemic state of the strain.
+- `strain::Strain`: Stores the parameters describing the virus strain.
+"""
+function initialise!(rng::AbstractRNG, state::State, strain::Strain)
+    for _ in 1:(state.infected - length(state.recovery_times))
+        schedule_recovery!(rng, state, strain)
+    end
+
+    return state
+end
+
+"""
     infect!(rng, state, strain, environment)
 
 Handles the spread of a virus strain within the population.
@@ -193,7 +239,7 @@ of the strain.
 
 **Arguments**
 - `rng::AbstractRNG`: A random number generator.
-- `state::State`: The initial state of the strain.
+- `state::State`: The epidemic state of the strain.
 - `strain::Strain`: Stores the parameters describing the virus strain.
 - `environment::Environment`: Stores the population dynamics of the campus.
 """
@@ -252,17 +298,7 @@ function infect!(rng::AbstractRNG, state::State, strain::Strain, environment::En
         # Determine whether an infection occurs.
         if rand(rng) < p
             infections += 1
-
-            # Add the newly infected individual's recovery time to the recovery queue.
-            t = state.time + rand(rng, Gamma(strain.recovery_shape, strain.recovery_scale))
-            k = 1
-            while k <= length(state.recovery_times)
-                if t < state.recovery_times[k]
-                    break
-                end
-                k += 1
-            end
-            insert!(state.recovery_times, k, t)
+            schedule_recovery!(rng, state, strain)
         end
     end
 
@@ -280,7 +316,7 @@ Returns the number of new recoveries and updates `state` to reflect the new epid
 of the strain.
 
 **Arguments**
-- `state::State`: The initial state of the strain.
+- `state::State`: The epidemic state of the strain.
 """
 function recover!(state::State)
     recoveries = 0
@@ -309,7 +345,7 @@ epidemic state of the virus.
 
 **Arguments**
 - `rng::AbstractRNG`: A random number generator.
-- `state::State`: The initial state of the strain.
+- `state::State`: The epidemic state of the strain.
 - `strain::Strain`: Stores the parameters describing the virus strain.
 - `environment::Environment`: Stores the population dynamics of the campus.
 """
@@ -375,10 +411,9 @@ function simulate(
     recovered[1, :] = fill(state.recovered, trials)
 
     for i in 1:trials
-        trial_state = State(
-            state.time, state.susceptible, state.infected, state.recovered,
-            copy(state.recovery_times)
-        )
+        trial_state = initialise!(rngs[i], State(
+            state.time, state.susceptible, state.infected, state.recovered, []
+        ), strain)
 
         for j in 2:(time_steps + 1)
             data = advance!(rngs[i], trial_state, strain, environment)
