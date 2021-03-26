@@ -314,22 +314,26 @@ epidemic state of the virus.
 - `environment::Environment`: Stores the population dynamics of the campus.
 """
 function advance!(rng::AbstractRNG, state::State, strain::Strain, environment::Environment)
+    state.time += 1
     infect!(rng, state, strain, environment)
     recover!(state)
-    state.time += 1
 
     return (
         susceptible=state.susceptible, infected=state.infected, recovered=state.recovered
     )
 end
 
+SimulationData = @NamedTuple begin
+    population::Int
+    susceptible::Matrix{Int}
+    infected::Matrix{Int}
+    recovered::Matrix{Int}
+end
+
 """
     simulate(rngs, time_steps, state, strain, environment)
 
-Simulates the spread of a virus strain within a population.
-
-Returns a `NamedTuple` storing the number number of susceptible (`.susceptible`), infected
-(`.infected`), and recovered (`.recovered`) individuals at every time step in every trial.
+Simulates the spread of a virus strain within a population and returns `SimulationData`.
 
 **Arguments**
 - `rngs::Vector{AbstractRNG}`: A random number generator for each simulation trial.
@@ -360,11 +364,15 @@ function simulate(
     state::State,
     strain::Strain,
     environment::Environment
-) where T <: AbstractRNG
+)::SimulationData where T <: AbstractRNG
     trials = length(rngs)
-    susceptible = zeros(Int, time_steps, trials)
-    infected = zeros(Int, time_steps, trials)
-    recovered = zeros(Int, time_steps, trials)
+    susceptible = zeros(Int, time_steps + 1, trials)
+    infected = zeros(Int, time_steps + 1, trials)
+    recovered = zeros(Int, time_steps + 1, trials)
+
+    susceptible[1, :] = fill(state.susceptible, trials)
+    infected[1, :] = fill(state.infected, trials)
+    recovered[1, :] = fill(state.recovered, trials)
 
     for i in 1:trials
         trial_state = State(
@@ -372,7 +380,7 @@ function simulate(
             copy(state.recovery_times)
         )
 
-        for j in 1:time_steps
+        for j in 2:(time_steps + 1)
             data = advance!(rngs[i], trial_state, strain, environment)
 
             susceptible[j, i] = data.susceptible
@@ -381,7 +389,12 @@ function simulate(
         end
     end
 
-    return (susceptible=susceptible, infected=infected, recovered=recovered)
+    return (
+        population=(state.susceptible + state.infected + state.recovered),
+        susceptible=susceptible,
+        infected=infected,
+        recovered=recovered
+    )
 end
 
 function simulate(
