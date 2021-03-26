@@ -63,13 +63,13 @@ struct Strain
 end
 
 """
-    CampusSampler(width, height, scale, probabilities, aliases)
+    CampusSampler(rows, columns, scale, probabilities, aliases)
 
 A sampler used for generating individuals' locations using the alias method.
 
 **Fields**
-- `width::Int`: The width of the campus (in cells).
-- `height::Int`: The height of the campus (in cells).
+- `rows::Int`: The number of rows used to represent the campus.
+- `columns::Int`: The number of columns used to represent the campus.
 - `scale::Float64`: The scale used when representing the campus as a matrix
     (in metres/cell).
 - `probabilities::Matrix{Float64}`: The probability table used by the alias method when
@@ -82,17 +82,17 @@ A sampler used for generating individuals' locations using the alias method.
 Builds a `CampusSampler` from a matrix of weights.
 """
 struct CampusSampler <: Sampleable{Univariate, Discrete}
-    width::Int
-    height::Int
+    rows::Int
+    columns::Int
     scale::Float64
     probabilities::Matrix{Float64}
     aliases::Matrix{Int}
 end
 
 function CampusSampler(scale::Float64, weights::Matrix{Float64})
-    width, height = size(weights)
+    rows, columns = size(weights)
 
-    probabilities = weights / sum(weights) * width * height
+    probabilities = weights / sum(weights) * rows * columns
     aliases = zeros(Int, size(weights))
 
     indices = LinearIndices(size(weights))
@@ -110,7 +110,7 @@ function CampusSampler(scale::Float64, weights::Matrix{Float64})
         end
     end
 
-    return CampusSampler(width, height, scale, probabilities, aliases)
+    return CampusSampler(rows, columns, scale, probabilities, aliases)
 end
 
 """
@@ -123,17 +123,15 @@ Returns a randomly generated position of an individual on campus.
 - `sampler::CampusSampler`: A sampler describing the distribution of positions on campus.
 """
 function Base.rand(rng::AbstractRNG, sampler::CampusSampler)
-    u = sampler.width * sampler.height * rand(rng)
+    u = sampler.rows * sampler.columns * rand(rng)
     index = Int(floor(u)) + 1
 
     if u - index + 1 >= sampler.probabilities[index]
         index = sampler.aliases[index]
     end
 
-    width, height = size(sampler.probabilities)
-
-    x = sampler.scale * ((index % sampler.width) + rand(rng))
-    y = sampler.scale * ((index ÷ sampler.height) + rand(rng))
+    x = sampler.scale * (((index - 1) % sampler.rows) + rand(rng))
+    y = sampler.scale * (((index - 1) ÷ sampler.rows) + rand(rng))
 
     return (x=x, y=y)
 end
@@ -212,7 +210,7 @@ function infect!(rng::AbstractRNG, state::State, strain::Strain, environment::En
     S = [rand(rng, environment.campus_sampler) for _ in 1:active_susceptible]
     I = [rand(rng, environment.campus_sampler) for _ in 1:active_infected]
 
-    bound = strain.radius
+    bound = strain.radius^2
 
     # Attempt infections between nearby individuals.
     infections = 0
