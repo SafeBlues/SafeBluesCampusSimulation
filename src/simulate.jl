@@ -198,49 +198,71 @@ of the strain.
 - `environment::Environment`: Stores the population dynamics of the campus.
 """
 function infect!(rng::AbstractRNG, state::State, strain::Strain, environment::Environment)
-    # Get the activity (attendance & compliance) probability.
-    active_chance = (
+    # Get the number of active (attending & complying) participants.
+    activity = (
         is_weekend(state.time) ? environment.weekend_attendance
         : environment.weekday_attendance
     )[hour(state.time)] * environment.compliance
-    active_susceptible = rand(rng, Binomial(state.susceptible, active_chance))
-    active_infected = rand(rng, Binomial(state.infected, active_chance))
+    active_susceptible = rand(rng, Binomial(state.susceptible, activity))
+    active_infected = rand(rng, Binomial(state.infected, activity))
+    if active_susceptible == 0 || active_infected == 0
+        return 0
+    end
 
-    # Generate the location of every susceptible and infected individual.
-    S = [rand(rng, environment.campus_sampler) for _ in 1:active_susceptible]
-    I = [rand(rng, environment.campus_sampler) for _ in 1:active_infected]
+    width = environment.campus_sampler.columns * environment.campus_sampler.scale
+    height = environment.campus_sampler.rows * environment.campus_sampler.scale
+    blocks = zeros(Int, Int(height ÷ strain.radius) + 1, Int(width ÷ strain.radius) + 1)
+    links = zeros(Int, active_infected)
+
+    # Generate the locations of infected individuals.
+    infected_points = [rand(rng, environment.campus_sampler) for _ in 1:active_infected]
+    for (k, point) in enumerate(infected_points)
+        i, j = Int(point.x ÷ strain.radius + 1), Int(point.y ÷ strain.radius + 1)
+        blocks[i, j], links[k] = k, blocks[i, j]
+    end
 
     bound = strain.radius^2
 
+    offsets = ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1, 1))
+    neighbours(i::Integer, j::Integer) = (map(+, (i, j), offset) for offset in offsets)
+
     # Attempt infections between nearby individuals.
     infections = 0
-    for s in S
-        # Compute the probability of infection.
-        p = 0
-        for i in I
-            distance = (s.x - i.x)^2 + (s.y - i.y)^2
-            if distance >= bound
-                continue
-            end
+    for _ in 1:active_susceptible
+        point = rand(rng, environment.campus_sampler)
+        i, j = Int(point.x ÷ strain.radius + 1), Int(point.y ÷ strain.radius + 1)
 
-            q = 1 - exp(-strain.strength * (1 - √distance / strain.radius))
-            p = p + q - p * q
+        p = 0
+        for (i′, j′) in neighbours(i, j)
+            k = blocks[i′, j′]
+            while k != 0
+                point′ = infected_points[k]
+                k = links[k]
+
+                distance = (point.x - point′.x)^2 + (point.y - point′.y)^2
+                if distance >= bound
+                    continue
+                end
+
+                q = 1 - exp(-strain.strength * (1 - √distance / strain.radius))
+                p = p + q - p * q
+            end
         end
 
         # Determine whether an infection occurs.
         if rand(rng) < p
             infections += 1
 
-            # Add the newly infected person's recovery time to the recovery queue.
+            # Add the newly infected individual's recovery time to the recovery queue.
             t = state.time + rand(rng, Gamma(strain.recovery_shape, strain.recovery_scale))
-            i = 1
-            while i <= length(state.recovery_times)
-                if t < state.recovery_times[i]
+            k = 1
+            while k <= length(state.recovery_times)
+                if t < state.recovery_times[k]
                     break
                 end
-                i += 1
+                k += 1
             end
-            insert!(state.recovery_times, i, t)
+            insert!(state.recovery_times, k, t)
         end
     end
 
