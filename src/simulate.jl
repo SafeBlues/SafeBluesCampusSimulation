@@ -8,6 +8,7 @@ using YAML: load_file
 
 const HOURS_IN_DAY = 24
 const DAYS_IN_WEEK = 7
+const TIME_HORIZON = 840
 hour(time::Integer)::Int = time % HOURS_IN_DAY + 1
 day(time::Integer)::Int = (time ÷ HOURS_IN_DAY) % DAYS_IN_WEEK + 1
 is_weekend(time::Integer)::Bool = day(time) == 6 || day(time) == 7
@@ -368,44 +369,42 @@ SimulationData = @NamedTuple begin
 end
 
 """
-    simulate(rngs, time_steps, state, strain, environment)
+    simulate(rngs, state, strain, environment)
 
 Simulates the spread of a virus strain within a population and returns `SimulationData`.
 
 **Arguments**
 - `rngs::Vector{AbstractRNG}`: A random number generator for each simulation trial.
-- `time_steps::Integer`: The number of time steps within the simulation.
 - `state::State`: The initial state of the strain.
 - `strain::Strain`: Stores the parameters describing the virus strain.
 - `environment::Environment`: Stores the population dynamics of the campus.
 
 
-    simulate(time_steps, state, strain, environment)
-    simulate(rngs, time_steps, state, strain)
-    simulate(time_steps, state, strain)
+    simulate(state, strain, environment)
+    simulate(rngs, state, strain)
+    simulate(state, strain)
 
 Alternatively, when `rngs` is ommited the random number generators default to
 `[Random.GLOBAL_RNG]` and when `environment` is ommited the environment defaults to
 `GLOBAL_ENVIRONMENT`.
 
 
-    simulate(rng, time_steps, state, strain, environment)
-    simulate(rng, time_steps, state, strain)
+    simulate(rng, state, strain, environment)
+    simulate(rng, state, strain)
 
 If only a single random number generator `rng::AbstractRNG` is passed to `simulate`, then
 the simulation will be run exactly once.
 """
 function simulate(
     rngs::Vector{T},
-    time_steps::Integer,
     state::State,
     strain::Strain,
     environment::Environment
 )::SimulationData where T <: AbstractRNG
     trials = length(rngs)
-    susceptible = NamedDimsArray{(:time, :trial)}(zeros(Int, time_steps + 1, trials))
-    infected = NamedDimsArray{(:time, :trial)}(zeros(Int, time_steps + 1, trials))
-    recovered = NamedDimsArray{(:time, :trial)}(zeros(Int, time_steps + 1, trials))
+    susceptible = NamedDimsArray{(:time, :trial)}(zeros(Int, TIME_HORIZON + 1, trials))
+    infected = NamedDimsArray{(:time, :trial)}(zeros(Int, TIME_HORIZON + 1, trials))
+    recovered = NamedDimsArray{(:time, :trial)}(zeros(Int, TIME_HORIZON + 1, trials))
 
     susceptible[time=1] = fill(state.susceptible, trials)
     infected[time=1] = fill(state.infected, trials)
@@ -416,7 +415,7 @@ function simulate(
             state.time, state.susceptible, state.infected, state.recovered, []
         ), strain)
 
-        for time in 2:(time_steps + 1)
+        for time in 2:(TIME_HORIZON + 1)
             data = advance!(rngs[trial], trial_state, strain, environment)
 
             susceptible[time=time, trial=trial] = data.susceptible
@@ -434,37 +433,25 @@ function simulate(
 end
 
 function simulate(
-    time_steps::Integer,
     state::State,
     strain::Strain,
     environment::Environment
 )
-    return simulate([GLOBAL_RNG], time_steps, state, strain, environment)
+    return simulate([GLOBAL_RNG], state, strain, environment)
 end
 
-function simulate(
-    rngs::Vector{T},
-    time_steps::Integer,
-    state::State,
-    strain::Strain
-) where T <: AbstractRNG
-    return simulate(rngs, time_steps, state, strain, GLOBAL_ENVIRONMENT)
+function simulate(rngs::Vector{T}, state::State, strain::Strain) where T <: AbstractRNG
+    return simulate(rngs, state, strain, GLOBAL_ENVIRONMENT)
 end
 
-function simulate(time_steps::Integer, state::State, strain::Strain)
-    return simulate([GLOBAL_RNG], time_steps, state, strain, GLOBAL_ENVIRONMENT)
+function simulate(state::State, strain::Strain)
+    return simulate([GLOBAL_RNG], state, strain, GLOBAL_ENVIRONMENT)
 end
 
-function simulate(
-    rng::AbstractRNG,
-    time_steps::Integer,
-    state::State,
-    strain::Strain,
-    environment::Environment
-)
-    return simulate([rng], time_steps, state, strain, environment)
+function simulate(rng::AbstractRNG, state::State, strain::Strain, environment::Environment)
+    return simulate([rng], state, strain, environment)
 end
 
-function simulate(rng::AbstractRNG, time_steps::Integer, state::State, strain::Strain)
-    return simulate([rng], time_steps, state, strain, GLOBAL_ENVIRONMENT)
+function simulate(rng::AbstractRNG, state::State, strain::Strain)
+    return simulate([rng], state, strain, GLOBAL_ENVIRONMENT)
 end
