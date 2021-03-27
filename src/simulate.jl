@@ -3,6 +3,7 @@ using Random: AbstractRNG, Random.GLOBAL_RNG
 using Distributions: Binomial, Discrete, Gamma, Sampleable, Univariate
 using FileIO: load
 using Images: Gray
+using NamedDims: NamedDimsArray
 using YAML: load_file
 
 const HOURS_IN_DAY = 24
@@ -361,9 +362,9 @@ end
 
 SimulationData = @NamedTuple begin
     population::Int
-    susceptible::Matrix{Int}
-    infected::Matrix{Int}
-    recovered::Matrix{Int}
+    susceptible::NamedDimsArray{(:time, :trial), Int, 2}
+    infected::NamedDimsArray{(:time, :trial), Int, 2}
+    recovered::NamedDimsArray{(:time, :trial), Int, 2}
 end
 
 """
@@ -402,25 +403,25 @@ function simulate(
     environment::Environment
 )::SimulationData where T <: AbstractRNG
     trials = length(rngs)
-    susceptible = zeros(Int, time_steps + 1, trials)
-    infected = zeros(Int, time_steps + 1, trials)
-    recovered = zeros(Int, time_steps + 1, trials)
+    susceptible = NamedDimsArray{(:time, :trial)}(zeros(Int, time_steps + 1, trials))
+    infected = NamedDimsArray{(:time, :trial)}(zeros(Int, time_steps + 1, trials))
+    recovered = NamedDimsArray{(:time, :trial)}(zeros(Int, time_steps + 1, trials))
 
-    susceptible[1, :] = fill(state.susceptible, trials)
-    infected[1, :] = fill(state.infected, trials)
-    recovered[1, :] = fill(state.recovered, trials)
+    susceptible[time=1] = fill(state.susceptible, trials)
+    infected[time=1] = fill(state.infected, trials)
+    recovered[time=1] = fill(state.recovered, trials)
 
-    for i in 1:trials
-        trial_state = initialise!(rngs[i], State(
+    for trial in 1:trials
+        trial_state = initialise!(rngs[trial], State(
             state.time, state.susceptible, state.infected, state.recovered, []
         ), strain)
 
-        for j in 2:(time_steps + 1)
-            data = advance!(rngs[i], trial_state, strain, environment)
+        for time in 2:(time_steps + 1)
+            data = advance!(rngs[trial], trial_state, strain, environment)
 
-            susceptible[j, i] = data.susceptible
-            infected[j, i] = data.infected
-            recovered[j, i] = data.recovered
+            susceptible[time=time, trial=trial] = data.susceptible
+            infected[time=time, trial=trial] = data.infected
+            recovered[time=time, trial=trial] = data.recovered
         end
     end
 

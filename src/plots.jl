@@ -34,49 +34,49 @@ function sir_plot(
     traces::Vector{AbstractTrace} = []
 
     # Add the susceptible traces.
-    times = (0:(size(data.susceptible, 1) - 1)) / HOURS_IN_DAY
-    trials = size(data.susceptible, 2)
+    times = (0:(size(data.susceptible, :time) - 1)) / HOURS_IN_DAY
+    trials = size(data.susceptible, :trial)
     if show_susceptible && show_trials
         append!(traces, (scatter(
-            x=times, y=column, hoverinfo="skip", line_color=BLUE, mode="lines",
-            opacity=OPACITY, showlegend=false
-        ) for column in eachcol(data.susceptible)))
+            x=times, y=data.susceptible[trial=trial], hoverinfo="skip", line_color=BLUE,
+            mode="lines", opacity=OPACITY, showlegend=false
+        ) for trial in 1:trials))
     end
     if show_susceptible
         push!(traces, scatter(
-            x=times, y=sum(eachcol(data.susceptible)) / trials, line_color=BLUE,
+            x=times, y=vec(sum(data.susceptible, dims=:trial)) / trials, line_color=BLUE,
             mode="lines", name="Susceptible"
         ))
     end
 
     # Add the infected traces.
-    times = (0:(size(data.infected, 1) - 1)) / HOURS_IN_DAY
-    trials = size(data.infected, 2)
+    times = (0:(size(data.infected, :time) - 1)) / HOURS_IN_DAY
+    trials = size(data.infected, :trial)
     if show_infected && show_trials
         append!(traces, (scatter(
-            x=times, y=column, hoverinfo="skip", line_color=RED, mode="lines",
-            opacity=OPACITY, showlegend=false
-        ) for column in eachcol(data.infected)))
+            x=times, y=data.infected[trial=trial], hoverinfo="skip", line_color=RED,
+            mode="lines", opacity=OPACITY, showlegend=false
+        ) for trial in 1:trials))
     end
     if show_infected
         push!(traces, scatter(
-            x=times, y=sum(eachcol(data.infected)) / trials, line_color=RED, mode="lines",
-            name="Infected"
+            x=times, y=vec(sum(data.infected, dims=:trial)) / trials, line_color=RED,
+            mode="lines", name="Infected"
         ))
     end
 
     # Add the recovered traces.
-    times = (0:(size(data.recovered, 1) - 1)) / HOURS_IN_DAY
-    trials = size(data.recovered, 2)
+    times = (0:(size(data.recovered, :time) - 1)) / HOURS_IN_DAY
+    trials = size(data.recovered, :trial)
     if show_recovered && show_trials
         append!(traces, (scatter(
-            x=times, y=column, hoverinfo="skip", line_color=GREEN, mode="lines",
-            opacity=OPACITY, showlegend=false
-        ) for column in eachcol(data.recovered)))
+            x=times, y=data.recovered[trial=trial], hoverinfo="skip", line_color=GREEN,
+            mode="lines", opacity=OPACITY, showlegend=false
+        ) for trial in 1:trials))
     end
     if show_recovered
         push!(traces, scatter(
-            x=times, y=sum(eachcol(data.recovered)) / trials, line_color=GREEN,
+            x=times, y=vec(sum(data.recovered, dims=:trial)) / trials, line_color=GREEN,
             mode="lines", name="Recovered"
         ))
     end
@@ -103,20 +103,20 @@ Plots the cumulative infections from the provided simulation data.
 """
 function cumulative_plot(data::SimulationData; show_trials::Bool=true)
     cumulative = data.population .- data.susceptible
-    times = (0:(size(cumulative, 1) - 1)) / HOURS_IN_DAY
-    trials = size(cumulative, 2)
+    times = (0:(size(cumulative, :time) - 1)) / HOURS_IN_DAY
+    trials = size(cumulative, :trial)
 
     traces::Vector{AbstractTrace} = []
 
     if show_trials
         append!(traces, (scatter(
-            x=times, y=column, hoverinfo="skip", line_color=RED, mode="lines",
-            opacity=OPACITY, showlegend=false
-        ) for column in eachcol(cumulative)))
+            x=times, y=cumulative[trial=trial], hoverinfo="skip", line_color=RED,
+            mode="lines", opacity=OPACITY, showlegend=false
+        ) for trial in 1:trials))
     end
 
     push!(traces, scatter(
-        x=times, y=sum(eachcol(cumulative)) / trials, line_color=RED, mode="lines",
+        x=times, y=vec(sum(cumulative, dims=:trial)) / trials, line_color=RED, mode="lines",
         name="Infected (Cumulative)"
     ))
 
