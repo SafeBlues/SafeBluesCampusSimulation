@@ -186,6 +186,25 @@ const GLOBAL_ENVIRONMENT = cd(@__DIR__) do
 end
 
 """
+    Intervention(start, stop, strength)
+
+Stores the parameters describing a social distancing intervention.
+
+**Fields**
+- `start::Int`: The first time period (in hours from 12:00am Monday) of the intervention.
+- `stop::Int`: The last time period (in hours from 12:00am Monday) of the intervention.
+- `strength::Float64`: The strength of the intervention (from weakest `0.0` to strongest
+    `1.0`).
+"""
+struct Intervention
+    start::Int
+    stop::Int
+    strength::Float64
+end
+
+const DEFAULT_INTERVENTION = Intervention(0, 0, 0.0)
+
+"""
     schedule_recovery!(rng, state, strain)
 
 Generates the recovery time of a newly infected individual.
@@ -200,7 +219,7 @@ ordering.
 """
 function schedule_recovery!(rng::AbstractRNG, state::State, strain::Strain)
     time = state.time + rand(rng, Gamma(strain.recovery_shape, strain.recovery_scale))
-    
+
     # Insert the recovery time while maintaining the order.
     for k in 1:length(state.recovery_times)
         if time < state.recovery_times[k]
@@ -232,7 +251,7 @@ function initialise!(rng::AbstractRNG, state::State, strain::Strain)
 end
 
 """
-    infect!(rng, state, strain, environment)
+    infect!(rng, state, strain, environment, intervention)
 
 Handles the spread of a virus strain within the population.
 
@@ -244,8 +263,16 @@ of the strain.
 - `state::State`: The epidemic state of the strain.
 - `strain::Strain`: Stores the parameters describing the virus strain.
 - `environment::Environment`: Stores the population dynamics of the campus.
+- `intervention::Intervention`: Stores the parameters describing a social distancing
+    intervention.
 """
-function infect!(rng::AbstractRNG, state::State, strain::Strain, environment::Environment)
+function infect!(
+    rng::AbstractRNG,
+    state::State,
+    strain::Strain,
+    environment::Environment,
+    intervention::Intervention
+)
     # Get the number of active (attending & complying) participants.
     activity = (
         is_weekend(state.time) ? environment.weekend_attendance
@@ -256,6 +283,10 @@ function infect!(rng::AbstractRNG, state::State, strain::Strain, environment::En
     if active_susceptible == 0 || active_infected == 0
         return 0
     end
+
+    # Calculate the adjusted infection strength.
+    intervene = intervention.start <= state.time <= intervention.stop
+    strength = strain.strength * (intervene ? 1.0 - intervention.strength : 1.0)
 
     width = environment.campus_sampler.columns * environment.campus_sampler.scale
     height = environment.campus_sampler.rows * environment.campus_sampler.scale
@@ -292,7 +323,7 @@ function infect!(rng::AbstractRNG, state::State, strain::Strain, environment::En
                     continue
                 end
 
-                q = 1 - exp(-strain.strength * (1 - √distance / strain.radius))
+                q = 1 - exp(-strength * (1 - √distance / strain.radius))
                 p = p + q - p * q
             end
         end
@@ -337,7 +368,7 @@ function recover!(state::State)
 end
 
 """
-    advance!(rng, state, strain, environment)
+    advance!(rng, state, strain, environment, intervention)
 
 Advances the epidemic state of a virus strain forward by a single time increment.
 
@@ -350,10 +381,18 @@ number (`.reproduction`). Updates `state` to reflect the new epidemic state of t
 - `state::State`: The epidemic state of the strain.
 - `strain::Strain`: Stores the parameters describing the virus strain.
 - `environment::Environment`: Stores the population dynamics of the campus.
+- `intervention::Intervention`: Stores the parameters describing a social distancing
+    intervention.
 """
-function advance!(rng::AbstractRNG, state::State, strain::Strain, environment::Environment)
+function advance!(
+    rng::AbstractRNG,
+    state::State,
+    strain::Strain,
+    environment::Environment,
+    intervention::Intervention
+)
     state.time += 1
-    infections = infect!(rng, state, strain, environment)
+    infections = infect!(rng, state, strain, environment, intervention)
     recoveries = recover!(state)
 
     return (
@@ -386,6 +425,10 @@ Simulates the spread of a virus strain within a population and returns `Simulati
 - `strain::Strain`: Stores the parameters describing the virus strain.
 - `environment::Environment`: Stores the population dynamics of the campus.
 
+**Keyword Arguments**
+- `intervention::Intervention=DEFAULT_INTERVENTION`: Stores the parameters describing a
+    social distancing intervention.
+
 
     simulate(state, strain, environment)
     simulate(rngs, state, strain)
@@ -406,7 +449,8 @@ function simulate(
     rngs::Vector{T},
     state::State,
     strain::Strain,
-    environment::Environment
+    environment::Environment;
+    intervention::Intervention=DEFAULT_INTERVENTION
 )::SimulationData where T <: AbstractRNG
     trials = length(rngs)
     susceptible = NamedDimsArray{(:time, :trial)}(zeros(Int, TIME_HORIZON + 1, trials))
@@ -424,7 +468,7 @@ function simulate(
         ), strain)
 
         for time in 2:(TIME_HORIZON + 1)
-            data = advance!(rngs[trial], trial_state, strain, environment)
+            data = advance!(rngs[trial], trial_state, strain, environment, intervention)
 
             susceptible[time=time, trial=trial] = data.susceptible
             infected[time=time, trial=trial] = data.infected
@@ -445,23 +489,35 @@ end
 function simulate(
     state::State,
     strain::Strain,
-    environment::Environment
+    environment::Environment;
+    kwargs...
 )
-    return simulate([GLOBAL_RNG], state, strain, environment)
+    return simulate([GLOBAL_RNG], state, strain, environment; kwargs...)
 end
 
-function simulate(rngs::Vector{T}, state::State, strain::Strain) where T <: AbstractRNG
-    return simulate(rngs, state, strain, GLOBAL_ENVIRONMENT)
+function simulate(
+    rngs::Vector{T},
+    state::State,
+    strain::Strain;
+    kwargs...
+) where T <: AbstractRNG
+    return simulate(rngs, state, strain, GLOBAL_ENVIRONMENT; kwargs...)
 end
 
-function simulate(state::State, strain::Strain)
-    return simulate([GLOBAL_RNG], state, strain, GLOBAL_ENVIRONMENT)
+function simulate(state::State, strain::Strain; kwargs...)
+    return simulate([GLOBAL_RNG], state, strain, GLOBAL_ENVIRONMENT; kwargs...)
 end
 
-function simulate(rng::AbstractRNG, state::State, strain::Strain, environment::Environment)
-    return simulate([rng], state, strain, environment)
+function simulate(
+    rng::AbstractRNG,
+    state::State,
+    strain::Strain,
+    environment::Environment;
+    kwargs...
+)
+    return simulate([rng], state, strain, environment; kwargs...)
 end
 
-function simulate(rng::AbstractRNG, state::State, strain::Strain)
-    return simulate([rng], state, strain, GLOBAL_ENVIRONMENT)
+function simulate(rng::AbstractRNG, state::State, strain::Strain; kwargs...)
+    return simulate([rng], state, strain, GLOBAL_ENVIRONMENT; kwargs...)
 end
