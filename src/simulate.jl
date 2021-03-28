@@ -9,8 +9,8 @@ using YAML: load_file
 const HOURS_IN_DAY = 24
 const DAYS_IN_WEEK = 7
 const TIME_HORIZON = 840
-hour(time::Integer)::Int = time % HOURS_IN_DAY + 1
-day(time::Integer)::Int = (time ÷ HOURS_IN_DAY) % DAYS_IN_WEEK + 1
+hour(time::Integer)::Int = (time - 1) % HOURS_IN_DAY + 1
+day(time::Integer)::Int = ((time - 1) ÷ HOURS_IN_DAY) % DAYS_IN_WEEK + 1
 is_weekend(time::Integer)::Bool = day(time) == 6 || day(time) == 7
 
 """
@@ -342,8 +342,8 @@ end
 Advances the epidemic state of a virus strain forward by a single time increment.
 
 Returns a `NamedTuple` storing the number of susceptible (`.susceptible`), infected
-(`.infected`), and recovered (`.recovered`) individuals. Updates `state` to reflect the new
-epidemic state of the virus.
+(`.infected`), and recovered (`.recovered`) individuals and the effective reproduction
+number (`.reproduction`). Updates `state` to reflect the new epidemic state of the virus.
 
 **Arguments**
 - `rng::AbstractRNG`: A random number generator.
@@ -353,11 +353,17 @@ epidemic state of the virus.
 """
 function advance!(rng::AbstractRNG, state::State, strain::Strain, environment::Environment)
     state.time += 1
-    infect!(rng, state, strain, environment)
-    recover!(state)
+    infections = infect!(rng, state, strain, environment)
+    recoveries = recover!(state)
 
     return (
-        susceptible=state.susceptible, infected=state.infected, recovered=state.recovered
+        susceptible=state.susceptible,
+        infected=state.infected,
+        recovered=state.recovered,
+        reproduction=(
+            (infections != 0) * (infections / (state.infected - infections + recoveries))
+            * strain.recovery_scale * strain.recovery_shape
+        )  # Uses `false * NaN == 0` to correct division by zero.
     )
 end
 
@@ -366,6 +372,7 @@ SimulationData = @NamedTuple begin
     susceptible::NamedDimsArray{(:time, :trial), Int, 2}
     infected::NamedDimsArray{(:time, :trial), Int, 2}
     recovered::NamedDimsArray{(:time, :trial), Int, 2}
+    reproduction::NamedDimsArray{(:time, :trial), Float64, 2}
 end
 
 """
@@ -405,6 +412,7 @@ function simulate(
     susceptible = NamedDimsArray{(:time, :trial)}(zeros(Int, TIME_HORIZON + 1, trials))
     infected = NamedDimsArray{(:time, :trial)}(zeros(Int, TIME_HORIZON + 1, trials))
     recovered = NamedDimsArray{(:time, :trial)}(zeros(Int, TIME_HORIZON + 1, trials))
+    reproduction = NamedDimsArray{(:time, :trial)}(zeros(Float64, TIME_HORIZON + 1, trials))
 
     susceptible[time=1] = fill(state.susceptible, trials)
     infected[time=1] = fill(state.infected, trials)
@@ -421,6 +429,7 @@ function simulate(
             susceptible[time=time, trial=trial] = data.susceptible
             infected[time=time, trial=trial] = data.infected
             recovered[time=time, trial=trial] = data.recovered
+            reproduction[time=time, trial=trial] = data.reproduction
         end
     end
 
@@ -428,7 +437,8 @@ function simulate(
         population=(state.susceptible + state.infected + state.recovered),
         susceptible=susceptible,
         infected=infected,
-        recovered=recovered
+        recovered=recovered,
+        reproduction=reproduction
     )
 end
 
