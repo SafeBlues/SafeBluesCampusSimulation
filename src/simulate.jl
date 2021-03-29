@@ -45,43 +45,43 @@ function State(susceptible::Int, infected::Int, recovered::Int)
 end
 
 """
-    Strain(strength, radius, recovery_shape, recovery_scale)
+    Strain(strength, radius, shape, scale)
 
 Stores the parameters describing the dynamics of a virus strain.
 
 **Fields*
 - `strength (Float64)`: The infection strength of the virus strain.
 - `radius (Float64)`: The maximum infection radius of the virus strain (in metres).
-- `recovery_shape (Float64)`: The shape parameter used by the gamma-distributed infection
+- `shape (Float64)`: The shape parameter used by the gamma-distributed infection
     durations.
-- `recovery_scale (Float64)`: The scale parameter used by the gamma-distributed infection
+- `scale (Float64)`: The scale parameter used by the gamma-distributed infection
     durations.
 """
 struct Strain
     strength::Float64
     radius::Float64
-    recovery_shape::Float64
-    recovery_scale::Float64
+    shape::Float64
+    scale::Float64
 end
 
 """
-    Strains(strengths, radii, recovery_shapes, recovery_scales)
+    Strains(strength, radius, shape, scale)
 
 Stores the parameters describing the dynamics of multiple virus strains.
 
 **Fields*
-- `strengths (Float64)`: The infection strengths of the virus strains.
+- `strength (Float64)`: The infection strengths of the virus strains.
 - `radius (Float64)`: The maximum infection radii of the virus strains (in metres).
-- `recovery_shape (Float64)`: The shape parameters used by the gamma-distributed infection
+- `shape (Float64)`: The shape parameters used by the gamma-distributed infection
     durations.
-- `recovery_scale (Float64)`: The scale parameters used by the gamma-distributed infection
+- `scale (Float64)`: The scale parameters used by the gamma-distributed infection
     durations.
 """
 struct Strains
-    strengths::Vector{Float64}
-    radii::Vector{Float64}
-    recovery_shapes::Vector{Float64}
-    recovery_scales::Vector{Float64}
+    strength::Vector{Float64}
+    radius::Vector{Float64}
+    shape::Vector{Float64}
+    scale::Vector{Float64}
 end
 
 """
@@ -238,7 +238,7 @@ ordering.
 - `strain::Strain`: Stores the parameters describing the virus strain.
 """
 function schedule_recovery!(rng::AbstractRNG, state::State, strain::Strain)
-    time = state.time + rand(rng, Gamma(strain.recovery_shape, strain.recovery_scale))
+    time = state.time + rand(rng, Gamma(strain.shape, strain.scale))
 
     # Insert the recovery time while maintaining the order.
     for k in 1:length(state.recovery_times)
@@ -421,7 +421,7 @@ function advance!(
         recovered=state.recovered,
         reproduction=(
             (infections != 0) * (infections / (state.infected - infections + recoveries))
-            * strain.recovery_scale * strain.recovery_shape
+            * strain.scale * strain.shape
         )  # Uses `false * NaN == 0` to correct division by zero.
     )
 end
@@ -532,22 +532,22 @@ function simulate(
     state = State(state.susceptible, state.infected, state.recovered)
 
     susceptible = NamedDimsArray{(:time, :trial, :strength, :radius, :shape, :scale)}(zeros(
-        Int, TIME_HORIZON + 1, trials, length(strains.strengths), length(strains.radii),
-        length(strains.recovery_shapes), length(strains.recovery_scales)
+        Int, TIME_HORIZON + 1, trials, length(strains.strength), length(strains.radius),
+        length(strains.shape), length(strains.scale)
     ))
     infected = NamedDimsArray{(:time, :trial, :strength, :radius, :shape, :scale)}(zeros(
-        Int, TIME_HORIZON + 1, trials, length(strains.strengths), length(strains.radii),
-        length(strains.recovery_shapes), length(strains.recovery_scales)
+        Int, TIME_HORIZON + 1, trials, length(strains.strength), length(strains.radius),
+        length(strains.shape), length(strains.scale)
     ))
     recovered = NamedDimsArray{(:time, :trial, :strength, :radius, :shape, :scale)}(zeros(
-        Int, TIME_HORIZON + 1, trials, length(strains.strengths), length(strains.radii),
-        length(strains.recovery_shapes), length(strains.recovery_scales)
+        Int, TIME_HORIZON + 1, trials, length(strains.strength), length(strains.radius),
+        length(strains.shape), length(strains.scale)
     ))
 
-    for (i, strength) in enumerate(strains.strengths),
-            (j, radius) in enumerate(strains.radii),
-            (k, shape) in enumerate(strains.recovery_shapes),
-            (h, scale) in enumerate(strains.recovery_scales)
+    for (i, strength) in enumerate(strains.strength),
+            (j, radius) in enumerate(strains.radius),
+            (k, shape) in enumerate(strains.shape),
+            (h, scale) in enumerate(strains.scale)
         strain = Strain(strength, radius, shape, scale)
         data = simulate(rngs, state, strain, environment, intervention=intervention)
 
