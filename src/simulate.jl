@@ -65,6 +65,26 @@ struct Strain
 end
 
 """
+    Strains(strengths, radii, recovery_shapes, recovery_scales)
+
+Stores the parameters describing the dynamics of multiple virus strains.
+
+**Fields*
+- `strengths (Float64)`: The infection strengths of the virus strains.
+- `radius (Float64)`: The maximum infection radii of the virus strains (in metres).
+- `recovery_shape (Float64)`: The shape parameters used by the gamma-distributed infection
+    durations.
+- `recovery_scale (Float64)`: The scale parameters used by the gamma-distributed infection
+    durations.
+"""
+struct Strains
+    strengths::Vector{Float64}
+    radii::Vector{Float64}
+    recovery_shapes::Vector{Float64}
+    recovery_scales::Vector{Float64}
+end
+
+"""
     CampusSampler(rows, columns, scale, probabilities, aliases)
 
 A sampler used for generating individuals' locations using the alias method.
@@ -414,6 +434,15 @@ SimulationData = @NamedTuple begin
     reproduction::NamedDimsArray{(:time, :trial), Float64, 2}
 end
 
+ParametricData = @NamedTuple begin
+    state::State
+    strains::Strains
+
+    susceptible::NamedDimsArray{(:time, :trial, :strength, :radius, :shape, :scale), Int, 6}
+    infected::NamedDimsArray{(:time, :trial, :strength, :radius, :shape, :scale), Int, 6}
+    recovered::NamedDimsArray{(:time, :trial, :strength, :radius, :shape, :scale), Int, 6}
+end
+
 """
     simulate(rngs, state, strain, environment)
 
@@ -444,6 +473,12 @@ Alternatively, when `rngs` is ommited the random number generators default to
 
 If only a single random number generator `rng::AbstractRNG` is passed to `simulate`, then
 the simulation will be run exactly once.
+
+
+    simulate(rng, state, strains, environemnt)
+
+Finally, if `strain::Strain` is replaced by `strains::Strains`, then multiple simulations
+will be run using different strain parameters and `ParametricData` is returned.
 """
 function simulate(
     rngs::Vector{T},
@@ -487,8 +522,52 @@ function simulate(
 end
 
 function simulate(
+    rngs::Vector{T},
     state::State,
-    strain::Strain,
+    strains::Strains,
+    environment::Environment;
+    intervention::Intervention=DEFAULT_INTERVENTION
+)::ParametricData where T <: AbstractRNG
+    trials = length(rngs)
+    state = State(state.susceptible, state.infected, state.recovered)
+
+    susceptible = NamedDimsArray{(:time, :trial, :strength, :radius, :shape, :scale)}(zeros(
+        Int, TIME_HORIZON + 1, trials, length(strains.strengths), length(strains.radii),
+        length(strains.recovery_shapes), length(strains.recovery_scales)
+    ))
+    infected = NamedDimsArray{(:time, :trial, :strength, :radius, :shape, :scale)}(zeros(
+        Int, TIME_HORIZON + 1, trials, length(strains.strengths), length(strains.radii),
+        length(strains.recovery_shapes), length(strains.recovery_scales)
+    ))
+    recovered = NamedDimsArray{(:time, :trial, :strength, :radius, :shape, :scale)}(zeros(
+        Int, TIME_HORIZON + 1, trials, length(strains.strengths), length(strains.radii),
+        length(strains.recovery_shapes), length(strains.recovery_scales)
+    ))
+
+    for (i, strength) in enumerate(strains.strengths),
+            (j, radius) in enumerate(strains.radii),
+            (k, shape) in enumerate(strains.recovery_shapes),
+            (h, scale) in enumerate(strains.recovery_scales)
+        strain = Strain(strength, radius, shape, scale)
+        data = simulate(rngs, state, strain, environment, intervention=intervention)
+
+        susceptible[strength=i, radius=j, shape=k, scale=h] = data.susceptible
+        infected[strength=i, radius=j, shape=k, scale=h] = data.infected
+        recovered[strength=i, radius=j, shape=k, scale=h] = data.recovered
+    end
+
+    return (
+        state=state,
+        strains=strains,
+        susceptible=susceptible,
+        infected=infected,
+        recovered=recovered
+    )
+end
+
+function simulate(
+    state::State,
+    strain::Union{Strain, Strains},
     environment::Environment;
     kwargs...
 )
@@ -498,26 +577,26 @@ end
 function simulate(
     rngs::Vector{T},
     state::State,
-    strain::Strain;
+    strain::Union{Strain, Strains};
     kwargs...
 ) where T <: AbstractRNG
     return simulate(rngs, state, strain, GLOBAL_ENVIRONMENT; kwargs...)
 end
 
-function simulate(state::State, strain::Strain; kwargs...)
+function simulate(state::State, strain::Union{Strain, Strains}; kwargs...)
     return simulate([GLOBAL_RNG], state, strain, GLOBAL_ENVIRONMENT; kwargs...)
 end
 
 function simulate(
     rng::AbstractRNG,
     state::State,
-    strain::Strain,
+    strain::Union{Strain, Strains},
     environment::Environment;
     kwargs...
 )
     return simulate([rng], state, strain, environment; kwargs...)
 end
 
-function simulate(rng::AbstractRNG, state::State, strain::Strain; kwargs...)
+function simulate(rng::AbstractRNG, state::State, strain::Union{Strain, Strains}; kwargs...)
     return simulate([rng], state, strain, GLOBAL_ENVIRONMENT; kwargs...)
 end
