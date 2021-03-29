@@ -202,7 +202,7 @@ function load_environment(environment_file::String, heatmap_file::String)
 end
 
 const GLOBAL_ENVIRONMENT = cd(@__DIR__) do
-    return load_environment("../environment.yaml", "../heatmap.png")
+    return load_environment("assets/environment.yaml", "assets/heatmap.png")
 end
 
 """

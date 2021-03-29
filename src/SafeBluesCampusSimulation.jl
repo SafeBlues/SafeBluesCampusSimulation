@@ -1,7 +1,6 @@
 module SafeBluesCampusSimulation
 
-export State, Strain, Environment, load_environment, simulate!
-
-include("simulate.jl")
+include("core/simulate.jl")
+include("core/plots.jl")
 
 end
