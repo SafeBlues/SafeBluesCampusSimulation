@@ -1,0 +1,80 @@
+@import url('https://fonts.googleapis.com/css2?family=Ubuntu:wght@500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans&display=swap');
+
+/* General Styles
+ * -------------- */
+body {
+  background-color: #F3F3F3;
+}
+
+/* Cards
+ * ----- */
+.card {
+  background-color: #FFFFFF;
+  border-radius: 1em;
+  padding: 1em;
+}
+
+.card-header {
+  background-color: #323640;
+}
+
+.card-header h1 {
+  color: #FFFFFF;
+  font-family: 'Ubuntu', sans-serif;
+  font-weight: 500;
+}
+
+.card-grid {
+  align-items: center;
+  display: grid;
+  gap: 1em 0.5em;
+  grid-template-columns: repeat(12, 1fr);
+  padding: 1em;
+  justify-items: center;
+}
+
+/* Controls
+ * -------- */
+.label {
+  color: #000000;
+  font-family: 'Open Sans', sans-serif;
+  font-size: small;
+  grid-column: auto / span 2;
+  text-align: right;
+  width: 100%;
+}
+
+.input-box {
+  font-family: 'Open Sans', sans-serif;
+  font-size: small;
+  grid-column: auto / span 4;
+  height: 1.5em;
+  width: 90%;
+}
+
+.slider {
+  font-family: 'Open Sans', sans-serif;
+  grid-column: auto / span 6;
+  margin-bottom: -2%;  /* Vertically centre the slider. */
+  width: 90%;
+}
+
+/* Layout
+ * ------ */
+.app-grid {
+  display: grid;
+  gap: 1em;
+  grid-template-columns: repeat(12, 1fr);
+  margin: 1em;
+}
+
+.app-grid > * {
+  grid-column: 1 / span 12;
+}
+
+@media (min-width: 1400px) {
+  #controls-card {
+    grid-column: 1 / span 4;
+  }
+}

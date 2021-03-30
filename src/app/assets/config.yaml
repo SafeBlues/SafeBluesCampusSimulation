@@ -1,0 +1,72 @@
+# Seed Settings
+seed_label: "Seed"
+seed_min: 0
+seed_step: 1
+seed_value: 0
+
+# Trial Settings
+trials_label: "Trials"
+trials_min: 1
+trials_step: 1
+trials_value: 1
+
+# Susceptible Population Settings
+susceptible_label: "Susceptible"
+susceptible_min: 0
+susceptible_step: 1
+susceptible_value: 900
+
+# Infected Population Settings
+infected_label: "Infected"
+infected_min: 0
+infected_step: 1
+infected_value: 100
+
+# Infection Strength Settings
+infection_strength_label: "Infection Strength"
+infection_strength_min: 0.0
+infection_strength_max: 2.0
+infection_strength_step: 0.01
+infection_strength_value: 1.0
+
+# Infection Radius Settings
+infection_radius_label: "Infection Radius"
+infection_radius_min: 0.0
+infection_radius_max: 20.0
+infection_radius_step: 0.01
+infection_radius_value: 10.0
+
+# Infection Shape Settings
+infection_shape_label: "Duration Shape"
+infection_shape_min: 0.0
+infection_shape_max: 20.0
+infection_shape_step: 0.01
+infection_shape_value: 10.0
+
+# Infection Scale Settings
+infection_scale_label: "Duration Scale"
+infection_scale_min: 0.0
+infection_scale_max: 20.0
+infection_scale_step: 0.01
+infection_scale_value: 10.0
+
+#Intervention Start Settings
+intervention_start_label: "Intervention Start"
+intervention_start_min: 0
+intervention_start_max: 540
+intervention_start_step: 1
+intervention_start_value: 0
+
+#Intervention Stop Settings
+intervention_stop_label: "Intervention Stop"
+intervention_stop_min: 0
+intervention_stop_max: 540
+intervention_stop_step: 1
+intervention_stop_value: 0
+
+# Intervention Strength Settings
+intervention_strength_label: "Intervention Strength"
+intervention_strength_min: 0.0
+intervention_strength_max: 1.0
+intervention_strength_step: 0.01
+intervention_strength_value: 0.5
