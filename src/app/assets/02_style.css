@@ -81,4 +81,12 @@ body {
   #sir-plot-card {
     grid-column: 5 / span 8;
   }
+
+  #cumulative-plot-card {
+    grid-column: 1 / span 6;
+  }
+
+  #reproduction-plot-card {
+    grid-column: 7 / span 6;
+  }
 }

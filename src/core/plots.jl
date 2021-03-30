@@ -118,12 +118,12 @@ function cumulative_plot(data::SimulationData; show_trials::Bool=true)
 
     push!(traces, scatter(
         x=times, y=vec(sum(cumulative, dims=:trial)) / trials, line_color=RED, mode="lines",
-        name="Infected (Cumulative)"
+        name="", showlegend=false
     ))
 
     layout = Layout(
         xaxis_title="Time (days)", yaxis_range=(0, data.population),
-        yaxis_title="Population"
+        yaxis_title="Cumulative Infections"
     )
 
     return Plot(traces, layout)
@@ -170,7 +170,7 @@ function reproduction_plot(data::SimulationData, weight::Float64; show_trials::B
     ))
 
     layout = Layout(
-        xaxis_title="Time (days)", yaxis_title="Reproduction Number (Effective)"
+        xaxis_title="Time (days)", yaxis_title="Effective Reproduction Number"
     )
 
     return Plot(traces, layout)

@@ -157,11 +157,25 @@ function draw_sir_plot()
     end
 end
 
+function draw_cumulative_plot()
+    return html_div(id="cumulative-plot-card", className="card") do
+        dcc_graph(id="cumulative-plot")
+    end
+end
+
+function draw_reproduction_plot()
+    return html_div(id="reproduction-plot-card", className="card") do
+        dcc_graph(id="reproduction-plot")
+    end
+end
+
 function app_layout()
     return html_div(className="app-grid") do
         app_header(),
         controls(),
-        draw_sir_plot()
+        draw_sir_plot(),
+        draw_cumulative_plot(),
+        draw_reproduction_plot()
     end
 end
 
@@ -201,6 +215,8 @@ sync_slider("intervention-strength-input", "intervention-strength-slider")
 callback!(
     app,
     Output("sir-plot", "figure"),
+    Output("cumulative-plot", "figure"),
+    Output("reproduction-plot", "figure"),
     Input("seed-input", "value"),
     Input("trials-input", "value"),
     Input("susceptible-input", "value"),
@@ -222,5 +238,5 @@ callback!(
 
     data = simulate(rngs, state, strain; intervention=intervention)
 
-    return sir_plot(data)
+    return sir_plot(data), cumulative_plot(data), reproduction_plot(data, 0.9)
 end
