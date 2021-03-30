@@ -77,4 +77,8 @@ body {
   #controls-card {
     grid-column: 1 / span 4;
   }
+
+  #sir-plot-card {
+    grid-column: 5 / span 8;
+  }
 }

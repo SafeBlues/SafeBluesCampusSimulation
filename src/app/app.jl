@@ -1,4 +1,6 @@
-using Dash
+using Random: MersenneTwister
+
+using Dash: Input, Output, callback!, dash
 using DashHtmlComponents
 using DashCoreComponents
 using YAML: load_file
@@ -149,10 +151,17 @@ function controls()
     end
 end
 
+function draw_sir_plot()
+    return html_div(id="sir-plot-card", className="card") do
+        dcc_graph(id="sir-plot")
+    end
+end
+
 function app_layout()
     return html_div(className="app-grid") do
         app_header(),
-        controls()
+        controls(),
+        draw_sir_plot()
     end
 end
 
@@ -181,8 +190,37 @@ function sync_slider(input_id::String, slider_id::String)
     end
 end
 
+# Connect the parameter inputs to the parameter sliders.
 sync_slider("infection-strength-input", "infection-strength-slider")
 sync_slider("infection-radius-input", "infection-radius-slider")
 sync_slider("infection-shape-input", "infection-shape-slider")
 sync_slider("infection-scale-input", "infection-scale-slider")
 sync_slider("intervention-strength-input", "intervention-strength-slider")
+
+# Connect the parameter inputs to the SIR plot.
+callback!(
+    app,
+    Output("sir-plot", "figure"),
+    Input("seed-input", "value"),
+    Input("trials-input", "value"),
+    Input("susceptible-input", "value"),
+    Input("infected-input", "value"),
+    Input("infection-strength-input", "value"),
+    Input("infection-radius-input", "value"),
+    Input("infection-shape-input", "value"),
+    Input("infection-scale-input", "value"),
+    Input("intervention-start-input", "value"),
+    Input("intervention-stop-input", "value"),
+    Input("intervention-strength-input", "value")
+) do seed, trials, susceptible, infected, infection_strength, infection_radius,
+        infection_shape, infection_scale, intervention_start, intervention_stop,
+        intervention_strength
+    rngs = [MersenneTwister(seed + i - 1) for i in 1:trials]
+    state = State(susceptible, infected, 0)
+    strain = Strain(infection_strength, infection_radius, infection_shape, infection_scale)
+    intervention = Intervention(intervention_start, intervention_stop, intervention_strength)
+
+    data = simulate(rngs, state, strain; intervention=intervention)
+
+    return sir_plot(data)
+end
