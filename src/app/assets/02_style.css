@@ -60,6 +60,15 @@ body {
   width: 90%;
 }
 
+.radio-items {
+  display: flex;
+  font-family: 'Open Sans', sans-serif;
+  font-size: large;
+  grid-column: auto / span 10;
+  justify-content: space-around;
+  width: 80%;
+}
+
 /* Layout
  * ------ */
 .app-grid {

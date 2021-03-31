@@ -25,6 +25,13 @@ end
 
 function controls()
     return html_div(id="controls-card", className="card card-grid") do
+        # Model Choice
+        html_p(className="label", config["model_label"]),
+        dcc_radioitems(
+            id="model-input", className="radio-items", value=config["model_value"],
+            options=config["model_options"]
+        ),
+        
         # Seed
         html_p(className="label", config["seed_label"]),
         dcc_input(
@@ -211,12 +218,26 @@ sync_slider("infection-shape-input", "infection-shape-slider")
 sync_slider("infection-scale-input", "infection-scale-slider")
 sync_slider("intervention-strength-input", "intervention-strength-slider")
 
+# Disable the infection duration sliders when "SI" model is used.
+callback!(
+    app,
+    Output("infection-shape-input", "disabled"),
+    Output("infection-shape-slider", "disabled"),
+    Output("infection-scale-input", "disabled"),
+    Output("infection-scale-slider", "disabled"),
+    Input("model-input", "value")
+) do model
+    disabled = model != "SIR"
+    return (disabled, disabled, disabled, disabled)
+end
+
 # Connect the parameter inputs to the SIR plot.
 callback!(
     app,
     Output("sir-plot", "figure"),
     Output("cumulative-plot", "figure"),
     Output("reproduction-plot", "figure"),
+    Input("model-input", "value"),
     Input("seed-input", "value"),
     Input("trials-input", "value"),
     Input("susceptible-input", "value"),
@@ -228,9 +249,14 @@ callback!(
     Input("intervention-start-input", "value"),
     Input("intervention-stop-input", "value"),
     Input("intervention-strength-input", "value")
-) do seed, trials, susceptible, infected, infection_strength, infection_radius,
+) do model, seed, trials, susceptible, infected, infection_strength, infection_radius,
         infection_shape, infection_scale, intervention_start, intervention_stop,
         intervention_strength
+    if model == "SI"
+        infection_shape = 1
+        infection_scale = Inf
+    end
+
     rngs = [MersenneTwister(seed + i - 1) for i in 1:trials]
     state = State(susceptible, infected, 0)
     strain = Strain(infection_strength, infection_radius, infection_shape, infection_scale)
@@ -238,5 +264,6 @@ callback!(
 
     data = simulate(rngs, state, strain; intervention=intervention)
 
-    return sir_plot(data), cumulative_plot(data), reproduction_plot(data, 0.9)
+    return sir_plot(data; show_recovered=(model == "SIR")), cumulative_plot(data),
+        reproduction_plot(data, 0.9)
 end

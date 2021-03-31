@@ -240,6 +240,11 @@ ordering.
 function schedule_recovery!(rng::AbstractRNG, state::State, strain::Strain)
     time = state.time + rand(rng, Gamma(strain.shape, strain.scale))
 
+    # Ignore infinite infections durations. This individual will never recover.
+    if time == Inf
+        return state
+    end
+
     # Insert the recovery time while maintaining the order.
     for k in 1:length(state.recovery_times)
         if time < state.recovery_times[k]

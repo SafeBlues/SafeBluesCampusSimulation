@@ -1,3 +1,12 @@
+# Model Settings
+model_label: "Model"
+model_value: "SIR"
+model_options:
+  - label: "SIR"
+    value: "SIR"
+  - label: "SI"
+    value: "SI"
+
 # Seed Settings
 seed_label: "Seed"
 seed_min: 0
