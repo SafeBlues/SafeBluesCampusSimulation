@@ -94,8 +94,4 @@ body {
   #cumulative-plot-card {
     grid-column: 1 / span 6;
   }
-
-  #reproduction-plot-card {
-    grid-column: 7 / span 6;
-  }
 }
