@@ -45,19 +45,20 @@ infection_radius_max: 20.0
 infection_radius_step: 0.01
 infection_radius_value: 10.0
 
+
+# Infection Scale Settings
+infection_mean_label: "Duration Mean"
+infection_mean_min: 0.0
+infection_mean_max: 336.0
+infection_mean_step: 0.01
+infection_mean_value: 168.0
+
 # Infection Shape Settings
 infection_shape_label: "Duration Shape"
 infection_shape_min: 0.0
 infection_shape_max: 20.0
 infection_shape_step: 0.01
 infection_shape_value: 10.0
-
-# Infection Scale Settings
-infection_scale_label: "Duration Scale"
-infection_scale_min: 0.0
-infection_scale_max: 20.0
-infection_scale_step: 0.01
-infection_scale_value: 10.0
 
 #Intervention Start Settings
 intervention_start_label: "Intervention Start"

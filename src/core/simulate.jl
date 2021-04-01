@@ -45,43 +45,41 @@ function State(susceptible::Int, infected::Int, recovered::Int)
 end
 
 """
-    Strain(strength, radius, shape, scale)
+    Strain(strength, radius, duration_mean, duration_shape)
 
 Stores the parameters describing the dynamics of a virus strain.
 
 **Fields*
 - `strength (Float64)`: The infection strength of the virus strain.
 - `radius (Float64)`: The maximum infection radius of the virus strain (in metres).
-- `shape (Float64)`: The shape parameter used by the gamma-distributed infection
-    durations.
-- `scale (Float64)`: The scale parameter used by the gamma-distributed infection
+- `duration_mean (Float64)`: The mean infection duration.
+- `duration_shape (Float64)`: The shape parameter used by the gamma-distributed infection
     durations.
 """
 struct Strain
     strength::Float64
     radius::Float64
-    shape::Float64
-    scale::Float64
+    duration_mean::Float64
+    duration_shape::Float64
 end
 
 """
-    Strains(strength, radius, shape, scale)
+    Strains(strength, radius, duration_mean, duration_shape)
 
 Stores the parameters describing the dynamics of multiple virus strains.
 
 **Fields*
 - `strength (Float64)`: The infection strengths of the virus strains.
 - `radius (Float64)`: The maximum infection radii of the virus strains (in metres).
-- `shape (Float64)`: The shape parameters used by the gamma-distributed infection
-    durations.
-- `scale (Float64)`: The scale parameters used by the gamma-distributed infection
+- `duration_mean (Float64)`: The mean infection duration.
+- `duration_shape (Float64)`: The scale parameters used by the gamma-distributed infection
     durations.
 """
 struct Strains
     strength::Vector{Float64}
     radius::Vector{Float64}
-    shape::Vector{Float64}
-    scale::Vector{Float64}
+    duration_mean::Vector{Float64}
+    duration_shape::Vector{Float64}
 end
 
 """
@@ -238,7 +236,9 @@ ordering.
 - `strain::Strain`: Stores the parameters describing the virus strain.
 """
 function schedule_recovery!(rng::AbstractRNG, state::State, strain::Strain)
-    time = state.time + rand(rng, Gamma(strain.shape, strain.scale))
+    time = state.time + rand(rng, Gamma(
+        strain.duration_shape, strain.duration_mean / strain.duration_shape
+    ))
 
     # Ignore infinite infections durations. This individual will never recover.
     if time == Inf
@@ -427,20 +427,22 @@ function advance!(
     )
 end
 
+SimulationArray = NamedDimsArray{(:time, :trial)}
 SimulationData = @NamedTuple begin
     population::Int
-    susceptible::NamedDimsArray{(:time, :trial), Int, 2}
-    infected::NamedDimsArray{(:time, :trial), Int, 2}
-    recovered::NamedDimsArray{(:time, :trial), Int, 2}
+    susceptible::SimulationArray
+    infected::SimulationArray
+    recovered::SimulationArray
 end
 
+ParametricArray = NamedDimsArray{(:time, :trial, :strength, :radius, :duration_mean, :duration_scale)}
 ParametricData = @NamedTuple begin
     population::Int
     strains::Strains
 
-    susceptible::NamedDimsArray{(:time, :trial, :strength, :radius, :shape, :scale), Int, 6}
-    infected::NamedDimsArray{(:time, :trial, :strength, :radius, :shape, :scale), Int, 6}
-    recovered::NamedDimsArray{(:time, :trial, :strength, :radius, :shape, :scale), Int, 6}
+    susceptible::ParametricArray
+    infected::ParametricArray
+    recovered::ParametricArray
 end
 
 """
@@ -527,29 +529,29 @@ function simulate(
 )::ParametricData where T <: AbstractRNG
     trials = length(rngs)
 
-    susceptible = NamedDimsArray{(:time, :trial, :strength, :radius, :shape, :scale)}(zeros(
+    susceptible = NamedDimsArrayParametricArray(zeros(
         Int, TIME_HORIZON + 1, trials, length(strains.strength), length(strains.radius),
-        length(strains.shape), length(strains.scale)
+        length(strains.duration_mean), length(strains.duration_shape)
     ))
-    infected = NamedDimsArray{(:time, :trial, :strength, :radius, :shape, :scale)}(zeros(
+    infected = NamedDimsArrayParametricArray(zeros(
         Int, TIME_HORIZON + 1, trials, length(strains.strength), length(strains.radius),
-        length(strains.shape), length(strains.scale)
+        length(strains.duration_mean), length(strains.duration_shape)
     ))
-    recovered = NamedDimsArray{(:time, :trial, :strength, :radius, :shape, :scale)}(zeros(
+    recovered = NamedDimsArrayParametricArray(zeros(
         Int, TIME_HORIZON + 1, trials, length(strains.strength), length(strains.radius),
-        length(strains.shape), length(strains.scale)
+        length(strains.duration_mean), length(strains.duration_shape)
     ))
 
     for (i, strength) in enumerate(strains.strength),
             (j, radius) in enumerate(strains.radius),
-            (k, shape) in enumerate(strains.shape),
-            (h, scale) in enumerate(strains.scale)
-        strain = Strain(strength, radius, shape, scale)
+            (k, mean) in enumerate(strains.duration_mean),
+            (h, shape) in enumerate(strains.duration_shape)
+        strain = Strain(strength, radius, mean, shape)
         data = simulate(rngs, state, strain, environment, intervention=intervention)
 
-        susceptible[strength=i, radius=j, shape=k, scale=h] = data.susceptible
-        infected[strength=i, radius=j, shape=k, scale=h] = data.infected
-        recovered[strength=i, radius=j, shape=k, scale=h] = data.recovered
+        susceptible[strength=i, radius=j, duration_mean=k, duration_scale=h] = data.susceptible
+        infected[strength=i, radius=j, duration_mean=k, duration_scale=h] = data.infected
+        recovered[strength=i, radius=j, duration_mean=k, duration_scale=h] = data.recovered
     end
 
     return (

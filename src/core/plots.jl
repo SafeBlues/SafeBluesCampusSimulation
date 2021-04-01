@@ -146,9 +146,9 @@ Plots the total number of infections as a function of virus parameters.
 - `dim1::Symbol`: The parameter to show on the x-axis.
 - `dim2::Symbol`: The parameter to show on the y-axis.
 
-The dimensions `dim1` and `dim2` must be one of `:strength`, `:radius`, `:shape`, or
-`:scale`. The keyword arguments `strength`, `radius`, `shape`, and `scale` control the
-parameters that do not appear on the x-axis or y-axis.
+The dimensions `dim1` and `dim2` must be one of `:strength`, `:radius`, `:duration_mean`, or
+`:duration_scale`. The keyword arguments control the parameters that do not appear on the
+x-axis or y-axis.
 """
 function parametric_plot(
     data::ParametricData,
@@ -162,11 +162,12 @@ function parametric_plot(
     # Get the indices of the relevant data.
     strength = :strength == dim1 || :strength == dim2 ? (:) : strength
     radius = :radius == dim1 || :radius == dim2 ? (:) : radius
-    shape = :shape == dim1 || :shape == dim2 ? (:) : shape
-    scale = :scale == dim1 || :scale == dim2 ? (:) : scale
+    mean = :duration_mean == dim1 || :duration_mean == dim2 ? (:) : shape
+    shape = :duration_shape == dim1 || :duration_shape == dim2 ? (:) : scale
 
     total = data.population .- data.susceptible[
-        time=end, strength=strength, radius=radius, shape=shape, scale=scale
+        time=end, strength=strength, radius=radius, duration_mean=mean,
+        duration_shape=shape
     ]
 
     trials = size(total, :trial)

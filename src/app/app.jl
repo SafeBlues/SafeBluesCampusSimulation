@@ -92,6 +92,20 @@ function controls()
             marks=make_marks(config["infection_radius_min"], config["infection_radius_max"])
         ),
 
+        # Infection Duration Mean
+        html_p(className="label", config["infection_mean_label"]),
+        dcc_input(
+            id="infection-mean-input", className="input-box", type="number",
+            min=config["infection_mean_min"], value=config["infection_mean_value"]
+        ),
+        dcc_slider(
+            id="infection-mean-slider", className="slider",
+            min=config["infection_mean_min"], max=config["infection_mean_max"],
+            step=config["infection_mean_step"],
+            value=config["infection_mean_value"],
+            marks=make_marks(config["infection_mean_min"], config["infection_mean_max"])
+        ),
+
         # Infection Duration Shape
         html_p(className="label", config["infection_shape_label"]),
         dcc_input(
@@ -104,20 +118,6 @@ function controls()
             step=config["infection_shape_step"],
             value=config["infection_shape_value"],
             marks=make_marks(config["infection_shape_min"], config["infection_shape_max"])
-        ),
-
-        # Infection Duration Scale
-        html_p(className="label", config["infection_scale_label"]),
-        dcc_input(
-            id="infection-scale-input", className="input-box", type="number",
-            min=config["infection_scale_min"], value=config["infection_scale_value"]
-        ),
-        dcc_slider(
-            id="infection-scale-slider", className="slider",
-            min=config["infection_scale_min"], max=config["infection_scale_max"],
-            step=config["infection_scale_step"],
-            value=config["infection_scale_value"],
-            marks=make_marks(config["infection_scale_min"], config["infection_scale_max"])
         ),
 
         # Intervention Start
@@ -207,17 +207,17 @@ end
 # Connect the parameter inputs to the parameter sliders.
 sync_slider("infection-strength-input", "infection-strength-slider")
 sync_slider("infection-radius-input", "infection-radius-slider")
+sync_slider("infection-mean-input", "infection-mean-slider")
 sync_slider("infection-shape-input", "infection-shape-slider")
-sync_slider("infection-scale-input", "infection-scale-slider")
 sync_slider("intervention-strength-input", "intervention-strength-slider")
 
 # Disable the infection duration sliders when "SI" model is used.
 callback!(
     app,
+    Output("infection-mean-input", "disabled"),
+    Output("infection-mean-slider", "disabled"),
     Output("infection-shape-input", "disabled"),
     Output("infection-shape-slider", "disabled"),
-    Output("infection-scale-input", "disabled"),
-    Output("infection-scale-slider", "disabled"),
     Input("model-input", "value")
 ) do model
     disabled = model != "SIR"
@@ -236,22 +236,22 @@ callback!(
     Input("infected-input", "value"),
     Input("infection-strength-input", "value"),
     Input("infection-radius-input", "value"),
+    Input("infection-mean-input", "value"),
     Input("infection-shape-input", "value"),
-    Input("infection-scale-input", "value"),
     Input("intervention-start-input", "value"),
     Input("intervention-stop-input", "value"),
     Input("intervention-strength-input", "value")
 ) do model, seed, trials, susceptible, infected, infection_strength, infection_radius,
-        infection_shape, infection_scale, intervention_start, intervention_stop,
+        infection_mean, infection_shape, intervention_start, intervention_stop,
         intervention_strength
     if model == "SI"
         infection_shape = 1
-        infection_scale = Inf
+        infection_mean = Inf
     end
 
     rngs = [MersenneTwister(seed + i - 1) for i in 1:trials]
     state = State(susceptible, infected, 0)
-    strain = Strain(infection_strength, infection_radius, infection_shape, infection_scale)
+    strain = Strain(infection_strength, infection_radius, infection_mean, infection_shape)
     intervention = Intervention(intervention_start, intervention_stop, intervention_strength)
 
     data = simulate(rngs, state, strain; intervention=intervention)
