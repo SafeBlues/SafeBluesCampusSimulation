@@ -14,6 +14,48 @@ day(time::Integer)::Int = ((time - 1) ÷ HOURS_IN_DAY) % DAYS_IN_WEEK + 1
 is_weekend(time::Integer)::Bool = day(time) == 6 || day(time) == 7
 
 """
+    Strain(initial, strength, radius, duration_mean, duration_shape)
+
+Stores the parameters describing the dynamics of a virus strain.
+
+**Fields*
+- `initial (Float)`: The probability of initial infection.
+- `strength (Float64)`: The infection strength of the virus strain.
+- `radius (Float64)`: The maximum infection radius of the virus strain (in metres).
+- `duration_mean (Float64)`: The mean infection duration.
+- `duration_shape (Float64)`: The shape parameter used by the gamma-distributed infection
+    durations.
+"""
+struct Strain
+    initial::Float64
+    strength::Float64
+    radius::Float64
+    duration_mean::Float64
+    duration_shape::Float64
+end
+
+"""
+    Strains(initial, strength, radius, duration_mean, duration_shape)
+
+Stores the parameters describing the dynamics of multiple virus strains.
+
+**Fields*
+- `initial (Vector{Float64}): The probabilities of initial infection.
+- `strength (Vector{Float64})`: The infection strengths of the virus strains.
+- `radius (Vector{Float64})`: The maximum infection radii of the virus strains (in metres).
+- `duration_mean (Vector{Float64})`: The mean infection duration.
+- `duration_shape (Vector{Float64})`: The shape parameters used by the gamma-distributed
+    infection durations.
+"""
+struct Strains
+    initial::Vector{Float64}
+    strength::Vector{Float64}
+    radius::Vector{Float64}
+    duration_mean::Vector{Float64}
+    duration_shape::Vector{Float64}
+end
+
+"""
     State(time, susceptible, infected, recovered, recovery_times)
 
 Represents the epidemic state of a virus strain within a population.
@@ -27,10 +69,14 @@ Represents the epidemic state of a virus strain within a population.
     times (measured in hours from 12:00am Monday).
 
 
-    State(susceptible, infected, recovered)
+    State(rng, population, strain)
 
-Creates a `State` with the given number of susceptible, infected, and recovered individuals
-and the default starting time `t = 0` and recovery times `recovery_times = []`.
+Generates the initial state of a vrius strain within a population.
+
+**Fields**
+- `rng::AbstractRNG`: A random number generator.
+- `population::Integer`: The initial number of participants.
+- `strain::Strain`: Stores the parameters describing the virus strain.
 """
 mutable struct State
     time::Int
@@ -40,46 +86,15 @@ mutable struct State
     recovery_times::Vector{Float64}
 end
 
-function State(susceptible::Int, infected::Int, recovered::Int)
-    return State(0, susceptible, infected, recovered, [])
-end
+function State(rng::AbstractRNG, population::Integer, strain::Strain)
+    infected = rand(Binomial(population, strain.initial))
+    state = State(0, population - infected, infected, 0, [])
 
-"""
-    Strain(strength, radius, duration_mean, duration_shape)
+    for _ in 1:infected
+        schedule_recovery!(rng, state, strain)
+    end
 
-Stores the parameters describing the dynamics of a virus strain.
-
-**Fields*
-- `strength (Float64)`: The infection strength of the virus strain.
-- `radius (Float64)`: The maximum infection radius of the virus strain (in metres).
-- `duration_mean (Float64)`: The mean infection duration.
-- `duration_shape (Float64)`: The shape parameter used by the gamma-distributed infection
-    durations.
-"""
-struct Strain
-    strength::Float64
-    radius::Float64
-    duration_mean::Float64
-    duration_shape::Float64
-end
-
-"""
-    Strains(strength, radius, duration_mean, duration_shape)
-
-Stores the parameters describing the dynamics of multiple virus strains.
-
-**Fields*
-- `strength (Float64)`: The infection strengths of the virus strains.
-- `radius (Float64)`: The maximum infection radii of the virus strains (in metres).
-- `duration_mean (Float64)`: The mean infection duration.
-- `duration_shape (Float64)`: The scale parameters used by the gamma-distributed infection
-    durations.
-"""
-struct Strains
-    strength::Vector{Float64}
-    radius::Vector{Float64}
-    duration_mean::Vector{Float64}
-    duration_shape::Vector{Float64}
+    return state
 end
 
 """
@@ -258,24 +273,6 @@ function schedule_recovery!(rng::AbstractRNG, state::State, strain::Strain)
 end
 
 """
-    initialise(rng, state, strain)
-
-Initialises a `State` variable by generating missing recovery times.
-
-**Arguments:
-- `rng::AbstractRNG`: A random number generator.
-- `state::State`: The epidemic state of the strain.
-- `strain::Strain`: Stores the parameters describing the virus strain.
-"""
-function initialise!(rng::AbstractRNG, state::State, strain::Strain)
-    for _ in 1:(state.infected - length(state.recovery_times))
-        schedule_recovery!(rng, state, strain)
-    end
-
-    return state
-end
-
-"""
     infect!(rng, state, strain, environment, intervention)
 
 Handles the spread of a virus strain within the population.
@@ -435,7 +432,7 @@ SimulationData = @NamedTuple begin
     recovered::SimulationArray
 end
 
-ParametricArray = NamedDimsArray{(:time, :trial, :strength, :radius, :duration_mean, :duration_scale)}
+ParametricArray = NamedDimsArray{(:time, :trial, :initial, :strength, :radius, :duration_mean, :duration_shape)}
 ParametricData = @NamedTuple begin
     population::Int
     strains::Strains
@@ -446,13 +443,13 @@ ParametricData = @NamedTuple begin
 end
 
 """
-    simulate(rngs, state, strain, environment)
+    simulate(rngs, population, strain, environment)
 
 Simulates the spread of a virus strain within a population and returns `SimulationData`.
 
 **Arguments**
 - `rngs::Vector{AbstractRNG}`: A random number generator for each simulation trial.
-- `state::State`: The initial state of the strain.
+- `population::Integer`: The initial number of participants.
 - `strain::Strain`: Stores the parameters describing the virus strain.
 - `environment::Environment`: Stores the population dynamics of the campus.
 
@@ -461,59 +458,57 @@ Simulates the spread of a virus strain within a population and returns `Simulati
     social distancing intervention.
 
 
-    simulate(state, strain, environment)
-    simulate(rngs, state, strain)
-    simulate(state, strain)
+    simulate(population, strain, environment)
+    simulate(rngs, population, strain)
+    simulate(population, strain)
 
 Alternatively, when `rngs` is ommited the random number generators default to
 `[Random.GLOBAL_RNG]` and when `environment` is ommited the environment defaults to
 `GLOBAL_ENVIRONMENT`.
 
 
-    simulate(rng, state, strain, environment)
-    simulate(rng, state, strain)
+    simulate(rng, population, strain, environment)
+    simulate(rng, population, strain)
 
 If only a single random number generator `rng::AbstractRNG` is passed to `simulate`, then
 the simulation will be run exactly once.
 
 
-    simulate(rng, state, strains, environemnt)
+    simulate(rng, population, strains, environemnt)
 
 Finally, if `strain::Strain` is replaced by `strains::Strains`, then multiple simulations
 will be run using different strain parameters and `ParametricData` is returned.
 """
 function simulate(
     rngs::Vector{T},
-    state::State,
+    population::Integer,
     strain::Strain,
     environment::Environment;
     intervention::Intervention=DEFAULT_INTERVENTION
 )::SimulationData where T <: AbstractRNG
     trials = length(rngs)
-    susceptible = NamedDimsArray{(:time, :trial)}(zeros(Int, TIME_HORIZON + 1, trials))
-    infected = NamedDimsArray{(:time, :trial)}(zeros(Int, TIME_HORIZON + 1, trials))
-    recovered = NamedDimsArray{(:time, :trial)}(zeros(Int, TIME_HORIZON + 1, trials))
-
-    susceptible[time=1] = fill(state.susceptible, trials)
-    infected[time=1] = fill(state.infected, trials)
-    recovered[time=1] = fill(state.recovered, trials)
+    susceptible = SimulationArray(zeros(Int, TIME_HORIZON + 1, trials))
+    infected = SimulationArray(zeros(Int, TIME_HORIZON + 1, trials))
+    recovered = SimulationArray(zeros(Int, TIME_HORIZON + 1, trials))
 
     for trial in 1:trials
-        trial_state = initialise!(rngs[trial], State(
-            state.time, state.susceptible, state.infected, state.recovered, []
-        ), strain)
+        state = State(rngs[trial], population, strain)
+
+        susceptible[time=1, trial=trial] = state.susceptible
+        infected[time=1, trial=trial] = state.infected
+        recovered[time=1, trial=trial] = state.recovered
 
         for time in 2:(TIME_HORIZON + 1)
-            data = advance!(rngs[trial], trial_state, strain, environment, intervention)
+            advance!(rngs[trial], state, strain, environment, intervention)
 
-            susceptible[time=time, trial=trial] = data.susceptible
-            infected[time=time, trial=trial] = data.infected
-            recovered[time=time, trial=trial] = data.recovered
+            susceptible[time=time, trial=trial] = state.susceptible
+            infected[time=time, trial=trial] = state.infected
+            recovered[time=time, trial=trial] = state.recovered
         end
     end
 
     return (
-        population=(state.susceptible + state.infected + state.recovered),
+        population=population,
         susceptible=susceptible,
         infected=infected,
         recovered=recovered
@@ -522,40 +517,50 @@ end
 
 function simulate(
     rngs::Vector{T},
-    state::State,
+    population::Integer,
     strains::Strains,
     environment::Environment;
     intervention::Intervention=DEFAULT_INTERVENTION
 )::ParametricData where T <: AbstractRNG
     trials = length(rngs)
 
-    susceptible = NamedDimsArrayParametricArray(zeros(
-        Int, TIME_HORIZON + 1, trials, length(strains.strength), length(strains.radius),
-        length(strains.duration_mean), length(strains.duration_shape)
+    susceptible = ParametricArray(zeros(
+        Int, TIME_HORIZON + 1, trials, length(strains.initial), length(strains.strength),
+        length(strains.radius), length(strains.duration_mean),
+        length(strains.duration_shape)
     ))
-    infected = NamedDimsArrayParametricArray(zeros(
-        Int, TIME_HORIZON + 1, trials, length(strains.strength), length(strains.radius),
-        length(strains.duration_mean), length(strains.duration_shape)
+    infected = ParametricArray(zeros(
+        Int, TIME_HORIZON + 1, trials, length(strains.initial), length(strains.strength),
+        length(strains.radius), length(strains.duration_mean),
+        length(strains.duration_shape)
     ))
-    recovered = NamedDimsArrayParametricArray(zeros(
-        Int, TIME_HORIZON + 1, trials, length(strains.strength), length(strains.radius),
-        length(strains.duration_mean), length(strains.duration_shape)
+    recovered = ParametricArray(zeros(
+        Int, TIME_HORIZON + 1, trials, length(strains.initial), length(strains.strength),
+        length(strains.radius), length(strains.duration_mean),
+        length(strains.duration_shape)
     ))
 
-    for (i, strength) in enumerate(strains.strength),
-            (j, radius) in enumerate(strains.radius),
-            (k, mean) in enumerate(strains.duration_mean),
-            (h, shape) in enumerate(strains.duration_shape)
-        strain = Strain(strength, radius, mean, shape)
-        data = simulate(rngs, state, strain, environment, intervention=intervention)
+    for (i, initial) in enumerate(strains.initial),
+            (j, strength) in enumerate(strains.strength),
+            (k, radius) in enumerate(strains.radius),
+            (h, mean) in enumerate(strains.duration_mean),
+            (l, shape) in enumerate(strains.duration_shape)
+        strain = Strain(initial, strength, radius, mean, shape)
+        data = simulate(rngs, population, strain, environment, intervention=intervention)
 
-        susceptible[strength=i, radius=j, duration_mean=k, duration_scale=h] = data.susceptible
-        infected[strength=i, radius=j, duration_mean=k, duration_scale=h] = data.infected
-        recovered[strength=i, radius=j, duration_mean=k, duration_scale=h] = data.recovered
+        susceptible[
+            initial=i, strength=j, radius=k, duration_mean=h, duration_shape=l
+        ] = data.susceptible
+        infected[
+            initial=i, strength=j, radius=k, duration_mean=h, duration_shape=l
+        ] = data.infected
+        recovered[
+            initial=i, strength=j, radius=k, duration_mean=h, duration_shape=l
+        ] = data.recovered
     end
 
     return (
-        population=state.suscpetible + state.infected + state.recovered,
+        population=population,
         strains=strains,
         susceptible=susceptible,
         infected=infected,
@@ -564,37 +569,42 @@ function simulate(
 end
 
 function simulate(
-    state::State,
+    population::Integer,
     strain::Union{Strain, Strains},
     environment::Environment;
     kwargs...
 )
-    return simulate([GLOBAL_RNG], state, strain, environment; kwargs...)
+    return simulate([GLOBAL_RNG], population, strain, environment; kwargs...)
 end
 
 function simulate(
     rngs::Vector{T},
-    state::State,
+    population::Integer,
     strain::Union{Strain, Strains};
     kwargs...
 ) where T <: AbstractRNG
-    return simulate(rngs, state, strain, GLOBAL_ENVIRONMENT; kwargs...)
+    return simulate(rngs, population, strain, GLOBAL_ENVIRONMENT; kwargs...)
 end
 
-function simulate(state::State, strain::Union{Strain, Strains}; kwargs...)
-    return simulate([GLOBAL_RNG], state, strain, GLOBAL_ENVIRONMENT; kwargs...)
+function simulate(population::Integer, strain::Union{Strain, Strains}; kwargs...)
+    return simulate([GLOBAL_RNG], population, strain, GLOBAL_ENVIRONMENT; kwargs...)
 end
 
 function simulate(
     rng::AbstractRNG,
-    state::State,
+    population::Integer,
     strain::Union{Strain, Strains},
     environment::Environment;
     kwargs...
 )
-    return simulate([rng], state, strain, environment; kwargs...)
+    return simulate([rng], population, strain, environment; kwargs...)
 end
 
-function simulate(rng::AbstractRNG, state::State, strain::Union{Strain, Strains}; kwargs...)
-    return simulate([rng], state, strain, GLOBAL_ENVIRONMENT; kwargs...)
+function simulate(
+    rng::AbstractRNG,
+    population::Integer,
+    strain::Union{Strain, Strains};
+    kwargs...
+)
+    return simulate([rng], population, strain, GLOBAL_ENVIRONMENT; kwargs...)
 end

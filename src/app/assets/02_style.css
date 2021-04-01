@@ -64,7 +64,7 @@ body {
   display: flex;
   font-family: 'Open Sans', sans-serif;
   font-size: large;
-  grid-column: auto / span 10;
+  grid-column: auto / span 4;
   justify-content: space-around;
   width: 80%;
 }

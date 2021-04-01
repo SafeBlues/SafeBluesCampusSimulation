@@ -130,6 +130,7 @@ function cumulative_plot(data::SimulationData; show_trials::Bool=true)
 end
 
 const PARAMETER_LABELS = Dict(
+    :initial => "Initial Infection Chance",
     :strength => "Infection Strength",
     :radius => "Infection Radius (metres)",
     :shape => "Infection Duration Shape",
@@ -146,27 +147,29 @@ Plots the total number of infections as a function of virus parameters.
 - `dim1::Symbol`: The parameter to show on the x-axis.
 - `dim2::Symbol`: The parameter to show on the y-axis.
 
-The dimensions `dim1` and `dim2` must be one of `:strength`, `:radius`, `:duration_mean`, or
-`:duration_scale`. The keyword arguments control the parameters that do not appear on the
-x-axis or y-axis.
+The dimensions `dim1` and `dim2` must be one of `:initial`, `:strength`, `:radius`,
+`:duration_mean`, or `:duration_scale`. The keyword arguments control the parameters that do
+not appear on the x-axis or y-axis.
 """
 function parametric_plot(
     data::ParametricData,
     dim1::Symbol,
     dim2::Symbol;
+    initial::Integer=1,
     strength::Integer=1,
     radius::Integer=1,
     shape::Integer=1,
     scale::Integer=1
 )
     # Get the indices of the relevant data.
+    initial = :initial == dim1 || :initial == dim2 ? (:) : initial
     strength = :strength == dim1 || :strength == dim2 ? (:) : strength
     radius = :radius == dim1 || :radius == dim2 ? (:) : radius
     mean = :duration_mean == dim1 || :duration_mean == dim2 ? (:) : shape
     shape = :duration_shape == dim1 || :duration_shape == dim2 ? (:) : scale
 
     total = data.population .- data.susceptible[
-        time=end, strength=strength, radius=radius, duration_mean=mean,
+        time=end, initial=initial, strength=strength, radius=radius, duration_mean=mean,
         duration_shape=shape
     ]
 

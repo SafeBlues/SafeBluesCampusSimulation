@@ -19,17 +19,18 @@ trials_min: 1
 trials_step: 1
 trials_value: 1
 
-# Susceptible Population Settings
-susceptible_label: "Susceptible"
-susceptible_min: 0
-susceptible_step: 1
-susceptible_value: 900
+# Population Settings
+population_label: "Population"
+population_min: 0
+population_step: 1
+population_value: 1000
 
-# Infected Population Settings
-infected_label: "Infected"
-infected_min: 0
-infected_step: 1
-infected_value: 100
+# Initial Infection Chance Settings
+infection_initial_label: "Initial Infection"
+infection_initial_min: 0
+infection_initial_max: 1
+infection_initial_step: 0.01
+infection_initial_value: 0.1
 
 # Infection Strength Settings
 infection_strength_label: "Infection Strength"
@@ -44,7 +45,6 @@ infection_radius_min: 0.0
 infection_radius_max: 20.0
 infection_radius_step: 0.01
 infection_radius_value: 10.0
-
 
 # Infection Scale Settings
 infection_mean_label: "Duration Mean"

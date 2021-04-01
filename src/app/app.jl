@@ -47,20 +47,28 @@ function controls()
             value=config["trials_value"]
         ),
 
-        # Susceptible Population
-        html_p(className="label", config["susceptible_label"]),
+        # Population
+        html_p(className="label", config["population_label"]),
         dcc_input(
-            id="susceptible-input", className="input-box", type="number",
-            min=config["susceptible_min"], step=config["susceptible_step"],
-            value=config["susceptible_value"]
+            id="population-input", className="input-box", type="number",
+            min=config["population_min"], step=config["population_step"],
+            value=config["population_value"]
         ),
 
-        # Infected Population
-        html_p(className="label", config["infected_label"]),
+        # Initial Infection Chance
+        html_p(className="label", config["infection_initial_label"]),
         dcc_input(
-            id="infected-input", className="input-box", type="number",
-            min=config["infected_min"], step=config["infected_step"],
-            value=config["infected_value"]
+            id="infection-initial-input", className="input-box", type="number",
+            min=config["infection_initial_min"], max=config["infection_initial_max"],
+            value=config["infection_initial_value"]
+        ),
+        dcc_slider(
+            id="infection-initial-slider", className="slider",
+            min=config["infection_initial_min"], max=config["infection_initial_max"],
+            step=config["infection_initial_step"], value=config["infection_initial_value"],
+            marks=make_marks(
+                config["infection_initial_min"], config["infection_initial_max"]
+            )
         ),
 
         # Infection Strength
@@ -205,6 +213,7 @@ function sync_slider(input_id::String, slider_id::String)
 end
 
 # Connect the parameter inputs to the parameter sliders.
+sync_slider("infection-initial-input", "infection-initial-slider")
 sync_slider("infection-strength-input", "infection-strength-slider")
 sync_slider("infection-radius-input", "infection-radius-slider")
 sync_slider("infection-mean-input", "infection-mean-slider")
@@ -232,8 +241,8 @@ callback!(
     Input("model-input", "value"),
     Input("seed-input", "value"),
     Input("trials-input", "value"),
-    Input("susceptible-input", "value"),
-    Input("infected-input", "value"),
+    Input("population-input", "value"),
+    Input("infection-initial-input", "value"),
     Input("infection-strength-input", "value"),
     Input("infection-radius-input", "value"),
     Input("infection-mean-input", "value"),
@@ -241,20 +250,23 @@ callback!(
     Input("intervention-start-input", "value"),
     Input("intervention-stop-input", "value"),
     Input("intervention-strength-input", "value")
-) do model, seed, trials, susceptible, infected, infection_strength, infection_radius,
-        infection_mean, infection_shape, intervention_start, intervention_stop,
+) do model, seed, trials, population, infection_initial, infection_strength,
+        infection_radius, infection_mean, infection_shape, intervention_start,
+        intervention_stop,
         intervention_strength
     if model == "SI"
         infection_shape = 1
         infection_mean = Inf
     end
 
-    rngs = [MersenneTwister(seed + i - 1) for i in 1:trials]
-    state = State(susceptible, infected, 0)
-    strain = Strain(infection_strength, infection_radius, infection_mean, infection_shape)
+    rngs = [MersenneTwister(seed + (i - 1) * trials) for i in 1:trials]
+    strain = Strain(
+        infection_initial, infection_strength, infection_radius, infection_mean,
+        infection_shape
+    )
     intervention = Intervention(intervention_start, intervention_stop, intervention_strength)
 
-    data = simulate(rngs, state, strain; intervention=intervention)
+    data = simulate(rngs, population, strain; intervention=intervention)
 
     return sir_plot(data; show_recovered=(model == "SIR")), cumulative_plot(data)
 end
