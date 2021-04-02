@@ -46,6 +46,9 @@ Stores the parameters describing the dynamics of multiple virus strains.
 - `duration_mean (Vector{Float64})`: The mean infection duration.
 - `duration_shape (Vector{Float64})`: The shape parameters used by the gamma-distributed
     infection durations.
+
+Alternatively, when any argument is replaced by a `Float64` instead of `Vector{Float64}`,
+the underlying vector will be created automatically.
 """
 struct Strains
     initial::Vector{Float64}
@@ -53,6 +56,24 @@ struct Strains
     radius::Vector{Float64}
     duration_mean::Vector{Float64}
     duration_shape::Vector{Float64}
+end
+
+function Strains(
+    initial::Union{Real, Vector{T}},
+    strength::Union{Real, Vector{T}},
+    radius::Union{Real, Vector{T}},
+    duration_mean::Union{Real, Vector{T}},
+    duration_shape::Union{Real, Vector{T}}
+) where T <: Real
+    make_vector(x) = Float64.(x isa Real ? [x] : x)
+
+    return Strains(
+        make_vector(initial),
+        make_vector(strength),
+        make_vector(radius),
+        make_vector(duration_mean),
+        make_vector(duration_shape)
+    )
 end
 
 """
