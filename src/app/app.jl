@@ -1,5 +1,7 @@
 using Random: MersenneTwister
 
+import Dash
+
 using Dash: Input, Output, callback!, dash
 using DashHtmlComponents
 using DashCoreComponents
@@ -297,12 +299,19 @@ function draw_cumulative_plot()
     end
 end
 
+function draw_parametric_plot()
+    return html_div(id="parametric-plot-card", className="card") do
+        dcc_graph(id="parametric-plot")
+    end
+end
+
 function app_layout()
     return html_div(className="app-grid") do
         app_header(),
         main_controls(),
         draw_sir_plot(),
         draw_cumulative_plot(),
+        draw_parametric_plot(),
         parametric_controls()
     end
 end
@@ -481,4 +490,84 @@ callback!(
     end
 
     return (false, false, false)
+end
+
+# Connect the parameter inputs to the parametric plot.
+callback!(
+    app,
+    Output("parametric-plot", "figure"),
+    Input("model-input", "value"),
+    Input("seed-input", "value"),
+    Input("parametric-resolution-input", "value"),
+    Input("parametric-trials-input", "value"),
+    Input("population-input", "value"),
+    Input("infection-initial-input", "value"),
+    Input("infection-strength-input", "value"),
+    Input("infection-strength-start", "value"),
+    Input("infection-strength-stop", "value"),
+    Input("infection-radius-input", "value"),
+    Input("infection-radius-start", "value"),
+    Input("infection-radius-stop", "value"),
+    Input("infection-mean-input", "value"),
+    Input("infection-mean-start", "value"),
+    Input("infection-mean-stop", "value"),
+    Input("infection-shape-input", "value"),
+    Input("infection-shape-start", "value"),
+    Input("infection-shape-stop", "value"),
+    Input("intervention-start-input", "value"),
+    Input("intervention-stop-input", "value"),
+    Input("intervention-strength-input", "value"),
+    Input("parameter-input", "value")
+) do model, seed, resolution, trials, population, initial, infection_strength,
+        infection_strength_start, infection_strength_stop, infection_radius,
+        infection_radius_start, infection_radius_stop, infection_mean,
+        infection_mean_start, infection_mean_stop, infection_shape, infection_shape_start,
+        infection_shape_stop, intervention_start, intervention_stop, intervention_strength,
+        parameters
+    if parameters == "" || (length(parameters) != 1 && length(parameters) != 2)
+        return Plot()
+    end
+
+    rngs = [MersenneTwister(seed + (i - 1) * trials) for i in 1:trials]
+    intervention = Intervention(intervention_start, intervention_stop, intervention_strength)
+
+    if "strength" in parameters
+        infection_strength = Array(range(
+            infection_strength_start, stop=infection_strength_stop, length=resolution
+        ))
+    end
+
+    if "radius" in parameters
+        infection_radius = Array(range(
+            infection_radius_start, stop=infection_radius_stop, length=resolution
+        ))
+    end
+
+    if "duration-mean" in parameters
+        infection_mean = Array(range(
+            infection_mean_start, stop=infection_mean_stop, length=resolution
+        ))
+    end
+
+    if "duration-shape" in parameters
+        infection_shape = Array(range(
+            infection_shape_start, stop=infection_shape_stop, length=resolution
+        ))
+    end
+
+    strains = Strains(
+        initial, infection_strength, infection_radius, infection_mean, infection_shape    
+    )
+
+    data = simulate(rngs, population, strains; intervention=intervention)
+
+    symbols = Dict(
+        "strength" => :strength,
+        "radius" => :radius,
+        "duration-mean" => :duration_mean,
+        "duration-shape" => :duration_shape
+    )
+    dims = map(k -> symbols[k], parameters)
+
+    return parametric_plot(data, dims...)
 end

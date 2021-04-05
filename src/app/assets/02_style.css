@@ -111,6 +111,10 @@ body {
     grid-column: 1 / span 6;
   }
 
+  #parametric-plot-card {
+    grid-column: 1 / span 8;
+  }
+
   #parametric-controls-card {
     grid-column: 9 / span 4;
   }
