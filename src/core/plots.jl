@@ -158,19 +158,19 @@ function parametric_plot(
     initial::Integer=1,
     strength::Integer=1,
     radius::Integer=1,
-    shape::Integer=1,
-    scale::Integer=1
+    duration_mean::Integer=1,
+    duration_shape::Integer=1
 )
     # Get the indices of the relevant data.
     initial = :initial == dim1 || :initial == dim2 ? (:) : initial
     strength = :strength == dim1 || :strength == dim2 ? (:) : strength
     radius = :radius == dim1 || :radius == dim2 ? (:) : radius
-    mean = :duration_mean == dim1 || :duration_mean == dim2 ? (:) : shape
-    shape = :duration_shape == dim1 || :duration_shape == dim2 ? (:) : scale
+    duration_mean = :duration_mean == dim1 || :duration_mean == dim2 ? (:) : duration_mean
+    duration_shape = :duration_shape == dim1 || :duration_shape == dim2 ? (:) : duration_shape
 
     total = data.population .- data.susceptible[
-        time=end, initial=initial, strength=strength, radius=radius, duration_mean=mean,
-        duration_shape=shape
+        time=end, initial=initial, strength=strength, radius=radius,
+        duration_mean=duration_mean, duration_shape=duration_shape
     ]
 
     trials = size(total, :trial)
