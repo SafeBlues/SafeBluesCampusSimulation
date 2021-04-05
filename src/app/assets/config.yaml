@@ -39,12 +39,18 @@ infection_strength_max: 2.0
 infection_strength_step: 0.01
 infection_strength_value: 1.0
 
+infection_strength_start_value: 0.5
+infection_strength_stop_value: 1.5
+
 # Infection Radius Settings
 infection_radius_label: "Infection Radius"
 infection_radius_min: 0.0
 infection_radius_max: 20.0
 infection_radius_step: 0.01
 infection_radius_value: 10.0
+
+infection_radius_start_value: 5.0
+infection_radius_stop_value: 15.0
 
 # Infection Scale Settings
 infection_mean_label: "Duration Mean"
@@ -53,12 +59,18 @@ infection_mean_max: 336.0
 infection_mean_step: 0.01
 infection_mean_value: 168.0
 
+infection_mean_start_value: 84.0
+infection_mean_stop_value: 252.0
+
 # Infection Shape Settings
 infection_shape_label: "Duration Shape"
 infection_shape_min: 0.0
 infection_shape_max: 20.0
 infection_shape_step: 0.01
 infection_shape_value: 10.0
+
+infection_shape_start_value: 5.0
+infection_shape_stop_value: 15.0
 
 #Intervention Start Settings
 intervention_start_label: "Intervention Start"
@@ -80,3 +92,22 @@ intervention_strength_min: 0.0
 intervention_strength_max: 1.0
 intervention_strength_step: 0.01
 intervention_strength_value: 0.5
+
+# Parameter Choice Settings
+parameter_label: "Parameters"
+parameter_value: ""
+parameter_options:
+  - label: "Strength"
+    value: "strength"
+  - label: "Radius"
+    value: "radius"
+  - label: "Duration Mean"
+    value: "duration-mean"
+  - label: "Duration Shape"
+    value: "duration-shape"
+
+# Resolution Settings
+resolution_label: "Resolution"
+resolution_min: 0
+resolution_step: 1
+resolution_value: 10

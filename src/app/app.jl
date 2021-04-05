@@ -23,8 +23,8 @@ function app_header()
     end
 end
 
-function controls()
-    return html_div(id="controls-card", className="card card-grid") do
+function main_controls()
+    return html_div(id="main-controls-card", className="card card-grid") do
         # Model Choice
         html_p(className="label", config["model_label"]),
         dcc_radioitems(
@@ -166,6 +166,125 @@ function controls()
     end
 end
 
+function parametric_controls()
+    return html_div(id="parametric-controls-card", className="card card-grid") do
+        # Parameter Choice
+        html_p(className="label", config["parameter_label"]),
+        dcc_dropdown(
+            id="parameter-input", value=config["parameter_value"],
+            options=config["parameter_options"], multi=true
+        ),
+
+        # Resolution
+        html_p(className="label", config["resolution_label"]),
+        dcc_input(
+            id="parametric-resolution-input", className="input-box", type="number",
+            min=config["resolution_min"], step=config["resolution_step"],
+            value=config["resolution_value"]
+        ),
+
+        # Trials
+        html_p(className="label", config["trials_label"]),
+        dcc_input(
+            id="parametric-trials-input", className="input-box", type="number",
+            min=config["trials_min"], step=config["trials_step"],
+            value=config["trials_value"]
+        ),
+
+        # Infection Strength
+        html_p(className="label", config["infection_strength_label"]),
+        dcc_input(
+            id="infection-strength-start", className="input-box-small", type="number",
+            min=config["infection_strength_min"],
+            value=config["infection_strength_start_value"]
+        ),
+        dcc_input(
+            id="infection-strength-stop", className="input-box-small", type="number",
+            min=config["infection_strength_min"],
+            value=config["infection_strength_stop_value"]
+        ),
+        dcc_rangeslider(
+            id="infection-strength-range", className="slider",
+            min=config["infection_strength_min"], max=config["infection_strength_max"],
+            step=config["infection_strength_step"], value=(
+                config["infection_strength_start_value"],
+                config["infection_strength_stop_value"]
+            ), marks=make_marks(
+                config["infection_strength_min"], config["infection_strength_max"]
+            )
+        ),
+
+        # Infection Radius
+        html_p(className="label", config["infection_radius_label"]),
+        dcc_input(
+            id="infection-radius-start", className="input-box-small", type="number",
+            min=config["infection_radius_min"],
+            value=config["infection_radius_start_value"]
+        ),
+        dcc_input(
+            id="infection-radius-stop", className="input-box-small", type="number",
+            min=config["infection_radius_min"],
+            value=config["infection_radius_stop_value"]
+        ),
+        dcc_rangeslider(
+            id="infection-radius-range", className="slider",
+            min=config["infection_radius_min"], max=config["infection_radius_max"],
+            step=config["infection_radius_step"], value=(
+                config["infection_radius_start_value"],
+                config["infection_radius_stop_value"]
+            ), marks=make_marks(
+                config["infection_radius_min"], config["infection_radius_max"]
+            )
+        ),
+
+        # Infection Duration Mean
+        html_p(className="label", config["infection_mean_label"]),
+        dcc_input(
+            id="infection-mean-start", className="input-box-small", type="number",
+            min=config["infection_mean_min"],
+            value=config["infection_mean_start_value"]
+        ),
+        dcc_input(
+            id="infection-mean-stop", className="input-box-small", type="number",
+            min=config["infection_mean_min"],
+            value=config["infection_mean_stop_value"]
+        ),
+        dcc_rangeslider(
+            id="infection-mean-range", className="slider",
+            min=config["infection_mean_min"], max=config["infection_mean_max"],
+            step=config["infection_mean_step"], value=(
+                config["infection_mean_start_value"],
+                config["infection_mean_stop_value"]
+            ), marks=make_marks(
+                config["infection_mean_min"], config["infection_mean_max"]
+            )
+        ),
+
+        # Infection Duration Shape
+        html_p(className="label", config["infection_shape_label"]),
+        dcc_input(
+            id="infection-shape-start", className="input-box-small", type="number",
+            min=config["infection_shape_min"],
+            value=config["infection_shape_start_value"]
+        ),
+        dcc_input(
+            id="infection-shape-stop", className="input-box-small", type="number",
+            min=config["infection_shape_min"],
+            value=config["infection_shape_stop_value"]
+        ),
+        dcc_rangeslider(
+            id="infection-shape-range", className="slider",
+            min=config["infection_shape_min"], max=config["infection_shape_max"],
+            step=config["infection_shape_step"], value=(
+                config["infection_shape_start_value"],
+                config["infection_shape_stop_value"]
+            ), marks=make_marks(
+                config["infection_shape_min"], config["infection_shape_max"]
+            )
+        )
+    end
+end
+
 function draw_sir_plot()
     return html_div(id="sir-plot-card", className="card") do
         dcc_graph(id="sir-plot")
@@ -181,9 +300,10 @@ end
 function app_layout()
     return html_div(className="app-grid") do
         app_header(),
-        controls(),
+        main_controls(),
         draw_sir_plot(),
-        draw_cumulative_plot()
+        draw_cumulative_plot(),
+        parametric_controls()
     end
 end
 
@@ -212,6 +332,28 @@ function sync_slider(input_id::String, slider_id::String)
     end
 end
 
+function sync_rangeslider(input1_id::String, input2_id::String, slider_id::String)
+    # Send the current value from the slider to the input boxes.
+    callback!(
+        app,
+        Output(input1_id, "value"),
+        Output(input2_id, "value"),
+        Input(slider_id, "value")
+    ) do value
+        return value
+    end
+
+    # Send the current value from the input boxes to the slider.
+    callback!(
+        app,
+        Output(slider_id, "value"),
+        Input(input1_id, "value"),
+        Input(input2_id, "value")
+    ) do value1, value2
+        return (value1, value2)
+    end
+end
+
 # Connect the parameter inputs to the parameter sliders.
 sync_slider("infection-initial-input", "infection-initial-slider")
 sync_slider("infection-strength-input", "infection-strength-slider")
@@ -219,6 +361,19 @@ sync_slider("infection-radius-input", "infection-radius-slider")
 sync_slider("infection-mean-input", "infection-mean-slider")
 sync_slider("infection-shape-input", "infection-shape-slider")
 sync_slider("intervention-strength-input", "intervention-strength-slider")
+
+sync_rangeslider(
+    "infection-strength-start", "infection-strength-stop", "infection-strength-range"
+)
+sync_rangeslider(
+    "infection-radius-start", "infection-radius-stop", "infection-radius-range"
+)
+sync_rangeslider(
+    "infection-mean-start", "infection-mean-stop", "infection-mean-range"
+)
+sync_rangeslider(
+    "infection-shape-start", "infection-shape-stop", "infection-shape-range"
+)
 
 # Disable the infection duration sliders when "SI" model is used.
 callback!(
@@ -269,4 +424,61 @@ callback!(
     data = simulate(rngs, population, strain; intervention=intervention)
 
     return sir_plot(data; show_recovered=(model == "SIR")), cumulative_plot(data)
+end
+
+# Enable the appropriate sliders when a parameter is selected.
+callback!(
+    app,
+    Output("infection-strength-start", "disabled"),
+    Output("infection-strength-stop", "disabled"),
+    Output("infection-strength-range", "disabled"),
+    Input("parameter-input", "value")
+) do value
+    if value == "" || !("strength" in value)
+        return (true, true, true)
+    end
+
+    return (false, false, false)
+end
+
+callback!(
+    app,
+    Output("infection-radius-start", "disabled"),
+    Output("infection-radius-stop", "disabled"),
+    Output("infection-radius-range", "disabled"),
+    Input("parameter-input", "value")
+) do value
+    if value == "" || !("radius" in value)
+        return (true, true, true)
+    end
+
+    return (false, false, false)
+end
+
+callback!(
+    app,
+    Output("infection-mean-start", "disabled"),
+    Output("infection-mean-stop", "disabled"),
+    Output("infection-mean-range", "disabled"),
+    Input("parameter-input", "value")
+) do value
+    if value == "" || !("duration-mean" in value)
+        return (true, true, true)
+    end
+
+    return (false, false, false)
+end
+
+callback!(
+    app,
+    Output("infection-shape-start", "disabled"),
+    Output("infection-shape-stop", "disabled"),
+    Output("infection-shape-range", "disabled"),
+    Input("parameter-input", "value")
+) do value
+    if value == "" || !("duration-shape" in value)
+        return (true, true, true)
+    end
+
+    return (false, false, false)
 end

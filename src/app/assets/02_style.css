@@ -50,7 +50,15 @@ body {
   font-size: small;
   grid-column: auto / span 4;
   height: 1.5em;
-  width: 90%;
+  width: 95%;
+}
+
+.input-box-small {
+  font-family: 'Open Sans', sans-serif;
+  font-size: small;
+  grid-column: auto / span 2;
+  height: 1.5em;
+  width: 85%;
 }
 
 .slider {
@@ -63,11 +71,19 @@ body {
 .radio-items {
   display: flex;
   font-family: 'Open Sans', sans-serif;
-  font-size: large;
+  font-size: small;
   grid-column: auto / span 4;
   justify-content: space-around;
   width: 80%;
 }
+
+.dash-dropdown {
+  font-family: 'Open Sans', sans-serif;
+  font-size: small;
+  grid-column: auto / span 10;
+  width: 90%;
+}
+
 
 /* Layout
  * ------ */
@@ -83,7 +99,7 @@ body {
 }
 
 @media (min-width: 1400px) {
-  #controls-card {
+  #main-controls-card {
     grid-column: 1 / span 4;
   }
 
@@ -93,5 +109,9 @@ body {
 
   #cumulative-plot-card {
     grid-column: 1 / span 6;
+  }
+
+  #parametric-controls-card {
+    grid-column: 9 / span 4;
   }
 }
