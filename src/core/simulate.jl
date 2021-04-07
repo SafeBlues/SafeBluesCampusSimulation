@@ -393,8 +393,15 @@ of the strain.
 
 **Arguments**
 - `state::State`: The epidemic state of the strain.
+
+**Keyword Arguments**
+- `mode::String="SIR"`: Selects the epidemic model used from one of "SIR", "SI", or "SIS".
 """
-function recover!(state::State)
+function recover!(state::State; mode::String="SIR")
+    if mode == "SI"
+        return 0
+    end
+
     recoveries = 0
     for t in state.recovery_times
         if t > state.time
@@ -406,7 +413,15 @@ function recover!(state::State)
     end
 
     state.infected -= recoveries
-    state.recovered += recoveries
+
+    if mode == "SIR"
+        state.recovered += recoveries
+    end
+
+    if mode == "SIS"
+        state.susceptible += recoveries
+    end
+
     return recoveries
 end
 
@@ -426,17 +441,21 @@ epidemic state of the virus.
 - `environment::Environment`: Stores the population dynamics of the campus.
 - `intervention::Intervention`: Stores the parameters describing a social distancing
     intervention.
+
+**Keyword Arguments**
+- `mode::String="SIR"`: Selects the epidemic model used from one of "SIR", "SI", or "SIS".
 """
 function advance!(
     rng::AbstractRNG,
     state::State,
     strain::Strain,
     environment::Environment,
-    intervention::Intervention
+    intervention::Intervention;
+    mode::String="SIR"
 )
     state.time += 1
     infections = infect!(rng, state, strain, environment, intervention)
-    recoveries = recover!(state)
+    recoveries = recover!(state; mode=mode)
 
     return (
         susceptible=state.susceptible,
@@ -477,6 +496,7 @@ Simulates the spread of a virus strain within a population and returns `Simulati
 **Keyword Arguments**
 - `intervention::Intervention=DEFAULT_INTERVENTION`: Stores the parameters describing a
     social distancing intervention.
+- `mode::String="SIR"`: Selects the epidemic model used from one of "SIR", "SI", or "SIS".
 
 
     simulate(population, strain, environment)
@@ -505,7 +525,8 @@ function simulate(
     population::Integer,
     strain::Strain,
     environment::Environment;
-    intervention::Intervention=DEFAULT_INTERVENTION
+    intervention::Intervention=DEFAULT_INTERVENTION,
+    mode::String="SIR"
 )::SimulationData where T <: AbstractRNG
     trials = length(rngs)
     susceptible = SimulationArray(zeros(Int, TIME_HORIZON + 1, trials))
@@ -520,7 +541,7 @@ function simulate(
         recovered[time=1, trial=trial] = state.recovered
 
         for time in 2:(TIME_HORIZON + 1)
-            advance!(rngs[trial], state, strain, environment, intervention)
+            advance!(rngs[trial], state, strain, environment, intervention; mode=mode)
 
             susceptible[time=time, trial=trial] = state.susceptible
             infected[time=time, trial=trial] = state.infected
