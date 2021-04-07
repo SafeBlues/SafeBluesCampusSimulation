@@ -294,12 +294,9 @@ function schedule_recovery!(rng::AbstractRNG, state::State, strain::Strain)
 end
 
 """
-    infect!(rng, state, strain, environment, intervention)
+    infect(rng, state, strain, environment, intervention)
 
-Handles the spread of a virus strain within the population.
-
-Returns the number of new infections and updates `state` to reflect the new epidemic state
-of the strain.
+Returns the number of newly infected individuals in a single time period.
 
 **Arguments**
 - `rng::AbstractRNG`: A random number generator.
@@ -309,7 +306,7 @@ of the strain.
 - `intervention::Intervention`: Stores the parameters describing a social distancing
     intervention.
 """
-function infect!(
+function infect(
     rng::AbstractRNG,
     state::State,
     strain::Strain,
@@ -374,52 +371,28 @@ function infect!(
         # Determine whether an infection occurs.
         if rand(rng) < p
             infections += 1
-            schedule_recovery!(rng, state, strain)
         end
     end
 
-    state.susceptible -= infections
-    state.infected += infections
     return infections
 end
 
 """
-    recover!(state)
+    recover(state)
 
-Handles the recoveries within the population.
-
-Returns the number of new recoveries and updates `state` to reflect the new epidemic state
-of the strain.
+Returns the number of newly recovered individuals in a single time period.
 
 **Arguments**
 - `state::State`: The epidemic state of the strain.
-
-**Keyword Arguments**
-- `mode::String="SIR"`: Selects the epidemic model used from one of "SIR", "SI", or "SIS".
 """
-function recover!(state::State; mode::String="SIR")
-    if mode == "SI"
-        return 0
-    end
-
+function recover(state::State; mode::String="SIR")
     recoveries = 0
     for t in state.recovery_times
         if t > state.time
             break
         end
 
-        popfirst!(state.recovery_times)
         recoveries += 1
-    end
-
-    state.infected -= recoveries
-
-    if mode == "SIR"
-        state.recovered += recoveries
-    end
-
-    if mode == "SIS"
-        state.susceptible += recoveries
     end
 
     return recoveries
@@ -454,8 +427,32 @@ function advance!(
     mode::String="SIR"
 )
     state.time += 1
-    infections = infect!(rng, state, strain, environment, intervention)
-    recoveries = recover!(state; mode=mode)
+    infections = infect(rng, state, strain, environment, intervention)
+
+    if mode == "SIR" || mode == "SIS"
+        # Schedule the recovery times.
+        for _ in 1:infections
+            schedule_recovery!(rng, state, strain)
+        end
+
+        recoveries = recover(state)
+
+        # Remove the recovery times belonging to recovered individuals.
+        for _ in 1:recoveries
+            popfirst!(state.recovery_times)
+        end
+    end
+
+    state.susceptible -= infections
+    state.infected += infections
+    
+    if mode == "SIR"
+        state.infected -= recoveries
+        state.recovered += recoveries
+    elseif mode == "SIS"
+        state.infected -= recoveries
+        state.susceptible += recoveries
+    end
 
     return (
         susceptible=state.susceptible,
