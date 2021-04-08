@@ -393,7 +393,7 @@ callback!(
     Output("infection-shape-slider", "disabled"),
     Input("model-input", "value")
 ) do model
-    disabled = model != "SIR"
+    disabled = model == "SI"
     return (disabled, disabled, disabled, disabled)
 end
 
@@ -430,7 +430,7 @@ callback!(
     )
     intervention = Intervention(intervention_start, intervention_stop, intervention_strength)
 
-    data = simulate(rngs, population, strain; intervention=intervention)
+    data = simulate(rngs, population, strain; intervention=intervention, mode=model)
 
     return sir_plot(data; show_recovered=(model == "SIR")), cumulative_plot(data)
 end

@@ -6,6 +6,8 @@ model_options:
     value: "SIR"
   - label: "SI"
     value: "SI"
+  - label: "SIS"
+    value: "SIS"
 
 # Seed Settings
 seed_label: "Seed"
