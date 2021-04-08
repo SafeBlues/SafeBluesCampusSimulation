@@ -530,6 +530,8 @@ function simulate(
     infected = SimulationArray(zeros(Int, TIME_HORIZON + 1, trials))
     recovered = SimulationArray(zeros(Int, TIME_HORIZON + 1, trials))
 
+    rngs = copy.(rngs)
+
     for trial in 1:trials
         state = State(rngs[trial], population, strain)
 
