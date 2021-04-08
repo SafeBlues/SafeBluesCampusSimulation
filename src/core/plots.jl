@@ -129,12 +129,12 @@ function cumulative_plot(data::SimulationData; show_trials::Bool=true)
     return Plot(traces, layout)
 end
 
-const PARAMETER_LABELS = Dict(
+const parameter_labels = Dict(
     :initial => "Initial Infection Chance",
     :strength => "Infection Strength",
     :radius => "Infection Radius (metres)",
-    :shape => "Infection Duration Shape",
-    :scale => "Infection Duration Scale"
+    :duration_mean => "Infection Duration Mean (days)",
+    :duration_shape => "Infection Duration Shape"
 )
 
 """
@@ -191,7 +191,7 @@ function parametric_plot(
     )]
 
     layout = Layout(
-        xaxis_title=PARAMETER_LABELS[dim], yaxis_range=(0, data.population),
+        xaxis_title=parameter_labels[dim], yaxis_range=(0, data.population),
         yaxis_title="Infected (Cumulative)"
     )
 
@@ -230,8 +230,11 @@ function parametric_plot(
         colorscale=[[0.0, BLUE], [1.0, GREEN]]
     )]
 
+    println(dim1)
+    println(dim2)
+
     layout = Layout(scene=attr(
-        xaxis_title=PARAMETER_LABELS[dim1], yaxis_title=PARAMETER_LABELS[dim2],
+        xaxis_title=parameter_labels[dim1], yaxis_title=parameter_labels[dim2],
         zazis_range=(0, data.population), zaxis_title="Infected (Cumulative)"
     ))
 
