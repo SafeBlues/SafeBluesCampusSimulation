@@ -107,10 +107,6 @@ body {
     grid-column: 5 / span 8;
   }
 
-  #cumulative-plot-card {
-    grid-column: 1 / span 6;
-  }
-
   #parametric-plot-card {
     grid-column: 1 / span 8;
   }

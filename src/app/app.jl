@@ -293,12 +293,6 @@ function draw_sir_plot()
     end
 end
 
-function draw_cumulative_plot()
-    return html_div(id="cumulative-plot-card", className="card") do
-        dcc_graph(id="cumulative-plot")
-    end
-end
-
 function draw_parametric_plot()
     return html_div(id="parametric-plot-card", className="card") do
         dcc_graph(id="parametric-plot")
@@ -310,7 +304,6 @@ function app_layout()
         app_header(),
         main_controls(),
         draw_sir_plot(),
-        draw_cumulative_plot(),
         draw_parametric_plot(),
         parametric_controls()
     end
@@ -397,11 +390,10 @@ callback!(
     return (disabled, disabled, disabled, disabled)
 end
 
-# Connect the parameter inputs to the plots.
+# Connect the parameter inputs to the plot.
 callback!(
     app,
     Output("sir-plot", "figure"),
-    Output("cumulative-plot", "figure"),
     Input("model-input", "value"),
     Input("seed-input", "value"),
     Input("trials-input", "value"),
@@ -432,7 +424,11 @@ callback!(
 
     data = simulate(rngs, population, strain; intervention=intervention, mode=model)
 
-    return sir_plot(data; show_recovered=(model == "SIR")), cumulative_plot(data)
+    return sir_plot(
+        data;
+        show_cumulative_infected=(model == "SIR" || model == "SIS"),
+        show_recovered=(model == "SIR")
+    )
 end
 
 # Enable the appropriate sliders when a parameter is selected.
