@@ -328,46 +328,27 @@ function infect(
     intervene = intervention.start <= state.time <= intervention.stop
     strength = strain.strength * (intervene ? 1.0 - intervention.strength : 1.0)
 
-    width = environment.campus_sampler.columns * environment.campus_sampler.scale
-    height = environment.campus_sampler.rows * environment.campus_sampler.scale
-    blocks = zeros(Int, Int(height ÷ strain.radius) + 1, Int(width ÷ strain.radius) + 1)
-    links = zeros(Int, active_infected)
-
     # Generate the locations of infected individuals.
     infected_points = [rand(rng, environment.campus_sampler) for _ in 1:active_infected]
-    for (k, point) in enumerate(infected_points)
-        i, j = Int(point.x ÷ strain.radius + 1), Int(point.y ÷ strain.radius + 1)
-        blocks[i, j], links[k] = k, blocks[i, j]
-    end
 
     bound = strain.radius^2
-
-    offsets = ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1, 1))
-    neighbours(i::Integer, j::Integer) = (map(+, (i, j), offset) for offset in offsets)
 
     # Attempt infections between nearby individuals.
     infections = 0
     for _ in 1:active_susceptible
         point = rand(rng, environment.campus_sampler)
-        i, j = Int(point.x ÷ strain.radius + 1), Int(point.y ÷ strain.radius + 1)
 
         p = 0
-        for (i′, j′) in neighbours(i, j)
-            k = blocks[i′, j′]
-            while k != 0
-                point′ = infected_points[k]
-                k = links[k]
-
-                distance = (point.x - point′.x)^2 + (point.y - point′.y)^2
-                if distance >= bound
-                    continue
-                end
-
-                q = 1 - exp(-strength * (1 - √distance / strain.radius))
-                p = p + q - p * q
+        for point′ in infected_points
+            distance = (point.x - point′.x)^2 + (point.y - point′.y)^2
+            if distance >= bound
+                continue
             end
-        end
 
+            q = 1 - exp(-strength * (1 - √distance / strain.radius))
+            p = p + q - p * q
+        end
+    
         # Determine whether an infection occurs.
         if rand(rng) < p
             infections += 1
