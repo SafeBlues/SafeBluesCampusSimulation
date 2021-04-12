@@ -542,7 +542,8 @@ function simulate(
     population::Integer,
     strains::Strains,
     environment::Environment;
-    intervention::Intervention=DEFAULT_INTERVENTION
+    intervention::Intervention=DEFAULT_INTERVENTION,
+    mode::String="SIR"
 )::ParametricData where T <: AbstractRNG
     trials = length(rngs)
 
@@ -568,7 +569,9 @@ function simulate(
             (h, mean) in enumerate(strains.duration_mean),
             (l, shape) in enumerate(strains.duration_shape)
         strain = Strain(initial, strength, radius, mean, shape)
-        data = simulate(rngs, population, strain, environment, intervention=intervention)
+        data = simulate(
+            rngs, population, strain, environment, intervention=intervention, mode=mode
+        )
 
         susceptible[
             initial=i, strength=j, radius=k, duration_mean=h, duration_shape=l
