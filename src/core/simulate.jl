@@ -475,6 +475,8 @@ Simulates the spread of a virus strain within a population and returns `Simulati
 - `intervention::Intervention=DEFAULT_INTERVENTION`: Stores the parameters describing a
     social distancing intervention.
 - `mode::String="SIR"`: Selects the epidemic model used from one of "SIR", "SI", or "SIS".
+- `arrivals::Integer=0`: The number of new individuals that will arrive throughout the
+    simulation period.
 
 
     simulate(population, strain, environment)
@@ -504,12 +506,16 @@ function simulate(
     strain::Strain,
     environment::Environment;
     intervention::Intervention=DEFAULT_INTERVENTION,
-    mode::String="SIR"
+    mode::String="SIR",
+    arrivals::Integer=0
 )::SimulationData where T <: AbstractRNG
     trials = length(rngs)
     susceptible = SimulationArray(zeros(Int, TIME_HORIZON + 1, trials))
     infected = SimulationArray(zeros(Int, TIME_HORIZON + 1, trials))
     recovered = SimulationArray(zeros(Int, TIME_HORIZON + 1, trials))
+
+    arrival_rate = arrivals / TIME_HORIZON
+    arrival_excess = 0.0
 
     rngs = copy.(rngs)
 
@@ -521,6 +527,11 @@ function simulate(
         recovered[time=1, trial=trial] = state.recovered
 
         for time in 2:(TIME_HORIZON + 1)
+            # Calculate the number of new arrivals.
+            arrival_excess += arrival_rate
+            state.susceptible += floor(arrival_excess)
+            arrival_excess %= 1.0
+
             advance!(rngs[trial], state, strain, environment, intervention; mode=mode)
 
             susceptible[time=time, trial=trial] = state.susceptible
@@ -530,7 +541,7 @@ function simulate(
     end
 
     return (
-        population=population,
+        population=population + arrivals,
         susceptible=susceptible,
         infected=infected,
         recovered=recovered
@@ -543,7 +554,8 @@ function simulate(
     strains::Strains,
     environment::Environment;
     intervention::Intervention=DEFAULT_INTERVENTION,
-    mode::String="SIR"
+    mode::String="SIR",
+    arrivals::Integer=0
 )::ParametricData where T <: AbstractRNG
     trials = length(rngs)
 
@@ -570,7 +582,8 @@ function simulate(
             (l, shape) in enumerate(strains.duration_shape)
         strain = Strain(initial, strength, radius, mean, shape)
         data = simulate(
-            rngs, population, strain, environment, intervention=intervention, mode=mode
+            rngs, population, strain, environment, intervention=intervention, mode=mode,
+            arrivals=arrivals
         )
 
         susceptible[
@@ -585,7 +598,7 @@ function simulate(
     end
 
     return (
-        population=population,
+        population=population + arrivals,
         strains=strains,
         susceptible=susceptible,
         infected=infected,

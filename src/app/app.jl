@@ -29,11 +29,10 @@ function main_controls()
     return html_div(id="main-controls-card", className="card card-grid") do
         # Model Choice
         html_p(className="label", config["model_label"]),
-        dcc_radioitems(
-            id="model-input", className="radio-items", value=config["model_value"],
-            options=config["model_options"]
+        dcc_dropdown(
+            id="model-input", value=config["model_value"], options=config["model_options"]
         ),
-        
+
         # Seed
         html_p(className="label", config["seed_label"]),
         dcc_input(
@@ -55,6 +54,14 @@ function main_controls()
             id="population-input", className="input-box", type="number",
             min=config["population_min"], step=config["population_step"],
             value=config["population_value"]
+        ),
+
+        # Arrivals
+        html_p(className="label", config["arrivals_label"]),
+        dcc_input(
+            id="arrivals-input", className="input-box", type="number",
+            min=config["arrivals_min"], step=config["arrivals_step"],
+            value=config["arrivals_value"]
         ),
 
         # Initial Infection Chance
@@ -398,6 +405,7 @@ callback!(
     Input("seed-input", "value"),
     Input("trials-input", "value"),
     Input("population-input", "value"),
+    Input("arrivals-input", "value"),
     Input("infection-initial-input", "value"),
     Input("infection-strength-input", "value"),
     Input("infection-radius-input", "value"),
@@ -406,7 +414,7 @@ callback!(
     Input("intervention-start-input", "value"),
     Input("intervention-stop-input", "value"),
     Input("intervention-strength-input", "value")
-) do model, seed, trials, population, infection_initial, infection_strength,
+) do model, seed, trials, population, arrivals, infection_initial, infection_strength,
         infection_radius, infection_mean, infection_shape, intervention_start,
         intervention_stop,
         intervention_strength
@@ -422,7 +430,9 @@ callback!(
     )
     intervention = Intervention(intervention_start, intervention_stop, intervention_strength)
 
-    data = simulate(rngs, population, strain; intervention=intervention, mode=model)
+    data = simulate(
+        rngs, population, strain; intervention=intervention, mode=model, arrivals=arrivals
+    )
 
     return sir_plot(
         data;
@@ -497,6 +507,7 @@ callback!(
     Input("parametric-resolution-input", "value"),
     Input("parametric-trials-input", "value"),
     Input("population-input", "value"),
+    Input("arrivals-input", "value"),
     Input("infection-initial-input", "value"),
     Input("infection-strength-input", "value"),
     Input("infection-strength-start", "value"),
@@ -514,7 +525,7 @@ callback!(
     Input("intervention-stop-input", "value"),
     Input("intervention-strength-input", "value"),
     Input("parameter-input", "value")
-) do model, seed, resolution, trials, population, initial, infection_strength,
+) do model, seed, resolution, trials, population, arrivals, initial, infection_strength,
         infection_strength_start, infection_strength_stop, infection_radius,
         infection_radius_start, infection_radius_stop, infection_mean,
         infection_mean_start, infection_mean_stop, infection_shape, infection_shape_start,
@@ -555,7 +566,7 @@ callback!(
         initial, infection_strength, infection_radius, infection_mean, infection_shape    
     )
 
-    data = simulate(rngs, population, strains; intervention=intervention)
+    data = simulate(rngs, population, strains; intervention=intervention, arrivals=arrivals)
 
     symbols = Dict(
         "strength" => :strength,

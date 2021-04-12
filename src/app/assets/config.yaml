@@ -27,6 +27,12 @@ population_min: 0
 population_step: 1
 population_value: 1000
 
+# Arrivals Settings
+arrivals_label: "Arrivals"
+arrivals_min: 0
+arrivals_step: 1
+arrivals_value: 0
+
 # Initial Infection Chance Settings
 infection_initial_label: "Initial Infection"
 infection_initial_min: 0
