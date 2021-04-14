@@ -371,7 +371,7 @@ epidemic state of the virus.
     intervention.
 
 **Keyword Arguments**
-- `mode::String="SIR"`: Selects the epidemic model used from one of "SIR", "SI", or "SIS".
+- `mode::Symbol=:SIR`: Selects the epidemic model used from one of :SIR, :SI, or :SIS.
 """
 function advance!(
     rng::AbstractRNG,
@@ -379,12 +379,12 @@ function advance!(
     strain::Strain,
     environment::Environment,
     intervention::Intervention;
-    mode::String="SIR"
+    mode::Symbol=:SIR
 )
     state.time += 1
     infections = infect(rng, state, strain, environment, intervention)
 
-    if mode == "SIR" || mode == "SIS"
+    if mode == :SIR || mode == :SIS
         # Schedule the recovery times.
         for _ in 1:infections
             schedule_recovery!(rng, state, strain)
@@ -408,10 +408,10 @@ function advance!(
     state.susceptible -= infections
     state.infected += infections
     
-    if mode == "SIR"
+    if mode == :SIR
         state.infected -= recoveries
         state.recovered += recoveries
-    elseif mode == "SIS"
+    elseif mode == :SIS
         state.infected -= recoveries
         state.susceptible += recoveries
     end
@@ -455,7 +455,7 @@ Simulates the spread of a virus strain within a population and returns `Simulati
 **Keyword Arguments**
 - `intervention::Intervention=DEFAULT_INTERVENTION`: Stores the parameters describing a
     social distancing intervention.
-- `mode::String="SIR"`: Selects the epidemic model used from one of "SIR", "SI", or "SIS".
+- `mode::Symbol=:SIR`: Selects the epidemic model used from one of :SIR, :SI, or :SIS.
 - `arrivals::Integer=0`: The number of new individuals that will arrive throughout the
     simulation period.
 
@@ -487,7 +487,7 @@ function simulate(
     strain::Strain,
     environment::Environment;
     intervention::Intervention=DEFAULT_INTERVENTION,
-    mode::String="SIR",
+    mode::Symbol=:SIR,
     arrivals::Integer=0
 )::SimulationData where T <: AbstractRNG
     trials = length(rngs)
@@ -535,7 +535,7 @@ function simulate(
     strains::Strains,
     environment::Environment;
     intervention::Intervention=DEFAULT_INTERVENTION,
-    mode::String="SIR",
+    mode::Symbol=:SIR,
     arrivals::Integer=0
 )::ParametricData where T <: AbstractRNG
     trials = length(rngs)

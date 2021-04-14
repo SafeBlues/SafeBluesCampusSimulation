@@ -421,6 +421,11 @@ callback!(
     if model == "SI"
         infection_shape = 1
         infection_mean = Inf
+        model = :SI
+    elseif model == "SIS"
+        model = :SIS
+    elseif model == "SIR"
+        model = :SIR
     end
 
     rngs = [MersenneTwister(seed + (i - 1) * trials) for i in 1:trials]
@@ -436,8 +441,8 @@ callback!(
 
     return sir_plot(
         data;
-        show_cumulative_infected=(model == "SIR" || model == "SIS"),
-        show_recovered=(model == "SIR")
+        show_cumulative_infected=(model == :SIR || model == :SIS),
+        show_recovered=(model == :SIR)
     )
 end
 
@@ -530,7 +535,7 @@ callback!(
         infection_radius_start, infection_radius_stop, infection_mean,
         infection_mean_start, infection_mean_stop, infection_shape, infection_shape_start,
         infection_shape_stop, intervention_start, intervention_stop, intervention_strength,
-        parameters
+        parameters        
     if parameters == "" || (length(parameters) != 1 && length(parameters) != 2)
         return Plot()
     end
