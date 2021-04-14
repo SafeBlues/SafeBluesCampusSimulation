@@ -194,7 +194,7 @@ function Base.rand(rng::AbstractRNG, sampler::CampusSampler)
 end
 
 """
-    Environment(campus_sampler, weekday_attendance, weekend_attendance, compliance)
+    Behaviour(campus_sampler, weekday_attendance, weekend_attendance, compliance)
 
 Stores the population dynamics of a campus.
 
@@ -206,7 +206,7 @@ Stores the population dynamics of a campus.
     weekend.
 - `compliance::Float64`: The probability that an individual is running the Safe Blues app.
 """
-struct Environment
+struct Behaviour
     campus_sampler::CampusSampler
     weekday_attendance::Vector{Float64}
     weekend_attendance::Vector{Float64}
@@ -214,16 +214,16 @@ struct Environment
 end
 
 """
-    load_environment(environment_file, heatmap_file)
+    load_behaviour(behaviour_file, heatmap_file)
 
-Loads an `Environment` from an environment configuration and a campus heatmap.
+Loads an `Behaviour` from an behaviour configuration and a campus heatmap.
 
 **Arguments**
-- `environment_file::String`: The path of an environment configuration file (`.yaml`).
+- `behaviour_file::String`: The path of an behaviour configuration file (`.yaml`).
 - `heatmap_file::String`: The path of a campus heatmap file (`.png`).
 """
-function load_environment(environment_file::String, heatmap_file::String)
-    contents = load_file(environment_file)
+function load_behaviour(behaviour_file::String, heatmap_file::String)
+    contents = load_file(behaviour_file)
 
     scale::Float64 = contents["scale"]
     weekday_attendance::Vector{Float64} = contents["weekday_attendance"]
@@ -233,11 +233,11 @@ function load_environment(environment_file::String, heatmap_file::String)
     weights = (x -> Float64(Gray(x))).(load(heatmap_file))
     campus_sampler = CampusSampler(scale, weights)
 
-    return Environment(campus_sampler, weekday_attendance, weekend_attendance, compliance)
+    return Behaviour(campus_sampler, weekday_attendance, weekend_attendance, compliance)
 end
 
-const GLOBAL_ENVIRONMENT = cd(@__DIR__) do
-    return load_environment("assets/environment.yaml", "assets/heatmap.png")
+const GLOBAL_BEHAVIOUR = cd(@__DIR__) do
+    return load_behaviour("assets/behaviour.yaml", "assets/heatmap.png")
 end
 
 """
@@ -289,7 +289,7 @@ function schedule_recovery!(rng::AbstractRNG, state::State, strain::Strain)
 end
 
 """
-    infect(rng, state, strain, environment, intervention)
+    infect(rng, state, strain, behaviour, intervention)
 
 Returns the number of newly infected individuals in a single time period.
 
@@ -297,7 +297,7 @@ Returns the number of newly infected individuals in a single time period.
 - `rng::AbstractRNG`: A random number generator.
 - `state::State`: The epidemic state of the strain.
 - `strain::Strain`: Stores the parameters describing the virus strain.
-- `environment::Environment`: Stores the population dynamics of the campus.
+- `behaviour::Behaviour`: Stores the population dynamics of the campus.
 - `intervention::Intervention`: Stores the parameters describing a social distancing
     intervention.
 """
@@ -305,14 +305,14 @@ function infect(
     rng::AbstractRNG,
     state::State,
     strain::Strain,
-    environment::Environment,
+    behaviour::Behaviour,
     intervention::Intervention
 )
     # Get the number of active (attending & complying) participants.
     activity = (
-        is_weekend(state.time) ? environment.weekend_attendance
-        : environment.weekday_attendance
-    )[hour(state.time)] * environment.compliance
+        is_weekend(state.time) ? behaviour.weekend_attendance
+        : behaviour.weekday_attendance
+    )[hour(state.time)] * behaviour.compliance
     active_susceptible = rand(rng, Binomial(state.susceptible, activity))
     active_infected = rand(rng, Binomial(state.infected, activity))
     if active_susceptible == 0 || active_infected == 0
@@ -324,14 +324,14 @@ function infect(
     strength = strain.strength * (intervene ? 1.0 - intervention.strength : 1.0)
 
     # Generate the locations of infected individuals.
-    infected_points = [rand(rng, environment.campus_sampler) for _ in 1:active_infected]
+    infected_points = [rand(rng, behaviour.campus_sampler) for _ in 1:active_infected]
 
     bound = strain.radius^2
 
     # Attempt infections between nearby individuals.
     infections = 0
     for _ in 1:active_susceptible
-        point = rand(rng, environment.campus_sampler)
+        point = rand(rng, behaviour.campus_sampler)
 
         p = 0
         for point′ in infected_points
@@ -354,7 +354,7 @@ function infect(
 end
 
 """
-    advance!(rng, state, strain, environment, intervention)
+    advance!(rng, state, strain, behaviour, intervention)
 
 Advances the epidemic state of a virus strain forward by a single time increment.
 
@@ -366,7 +366,7 @@ epidemic state of the virus.
 - `rng::AbstractRNG`: A random number generator.
 - `state::State`: The epidemic state of the strain.
 - `strain::Strain`: Stores the parameters describing the virus strain.
-- `environment::Environment`: Stores the population dynamics of the campus.
+- `behaviour::Behaviour`: Stores the population dynamics of the campus.
 - `intervention::Intervention`: Stores the parameters describing a social distancing
     intervention.
 
@@ -377,12 +377,12 @@ function advance!(
     rng::AbstractRNG,
     state::State,
     strain::Strain,
-    environment::Environment,
+    behaviour::Behaviour,
     intervention::Intervention;
     mode::Symbol=:SIR
 )
     state.time += 1
-    infections = infect(rng, state, strain, environment, intervention)
+    infections = infect(rng, state, strain, behaviour, intervention)
 
     if mode == :SIR || mode == :SIS
         # Schedule the recovery times.
@@ -442,7 +442,7 @@ ParametricData = @NamedTuple begin
 end
 
 """
-    simulate(rngs, population, strain, environment)
+    simulate(rngs, population, strain, behaviour)
 
 Simulates the spread of a virus strain within a population and returns `SimulationData`.
 
@@ -450,7 +450,7 @@ Simulates the spread of a virus strain within a population and returns `Simulati
 - `rngs::Vector{AbstractRNG}`: A random number generator for each simulation trial.
 - `population::Integer`: The initial number of participants.
 - `strain::Strain`: Stores the parameters describing the virus strain.
-- `environment::Environment`: Stores the population dynamics of the campus.
+- `behaviour::Behaviour`: Stores the population dynamics of the campus.
 
 **Keyword Arguments**
 - `intervention::Intervention=DEFAULT_INTERVENTION`: Stores the parameters describing a
@@ -460,23 +460,23 @@ Simulates the spread of a virus strain within a population and returns `Simulati
     simulation period.
 
 
-    simulate(population, strain, environment)
+    simulate(population, strain, behaviour)
     simulate(rngs, population, strain)
     simulate(population, strain)
 
 Alternatively, when `rngs` is ommited the random number generators default to
-`[Random.GLOBAL_RNG]` and when `environment` is ommited the environment defaults to
-`GLOBAL_ENVIRONMENT`.
+`[Random.GLOBAL_RNG]` and when `behaviour` is ommited the behaviour defaults to
+`GLOBAL_BEHAVIOUR`.
 
 
-    simulate(rng, population, strain, environment)
+    simulate(rng, population, strain, behaviour)
     simulate(rng, population, strain)
 
 If only a single random number generator `rng::AbstractRNG` is passed to `simulate`, then
 the simulation will be run exactly once.
 
 
-    simulate(rng, population, strains, environemnt)
+    simulate(rng, population, strains, behaviour)
 
 Finally, if `strain::Strain` is replaced by `strains::Strains`, then multiple simulations
 will be run using different strain parameters and `ParametricData` is returned.
@@ -485,7 +485,7 @@ function simulate(
     rngs::Vector{T},
     population::Integer,
     strain::Strain,
-    environment::Environment;
+    behaviour::Behaviour;
     intervention::Intervention=DEFAULT_INTERVENTION,
     mode::Symbol=:SIR,
     arrivals::Integer=0
@@ -513,7 +513,7 @@ function simulate(
             state.susceptible += floor(arrival_excess)
             arrival_excess %= 1.0
 
-            advance!(rngs[trial], state, strain, environment, intervention; mode=mode)
+            advance!(rngs[trial], state, strain, behaviour, intervention; mode=mode)
 
             susceptible[time=time, trial=trial] = state.susceptible
             infected[time=time, trial=trial] = state.infected
@@ -533,7 +533,7 @@ function simulate(
     rngs::Vector{T},
     population::Integer,
     strains::Strains,
-    environment::Environment;
+    behaviour::Behaviour;
     intervention::Intervention=DEFAULT_INTERVENTION,
     mode::Symbol=:SIR,
     arrivals::Integer=0
@@ -563,7 +563,7 @@ function simulate(
             (l, shape) in enumerate(strains.duration_shape)
         strain = Strain(initial, strength, radius, mean, shape)
         data = simulate(
-            rngs, population, strain, environment, intervention=intervention, mode=mode,
+            rngs, population, strain, behaviour, intervention=intervention, mode=mode,
             arrivals=arrivals
         )
 
@@ -590,10 +590,10 @@ end
 function simulate(
     population::Integer,
     strain::Union{Strain, Strains},
-    environment::Environment;
+    behaviour::Behaviour;
     kwargs...
 )
-    return simulate([GLOBAL_RNG], population, strain, environment; kwargs...)
+    return simulate([GLOBAL_RNG], population, strain, behaviour; kwargs...)
 end
 
 function simulate(
@@ -602,21 +602,21 @@ function simulate(
     strain::Union{Strain, Strains};
     kwargs...
 ) where T <: AbstractRNG
-    return simulate(rngs, population, strain, GLOBAL_ENVIRONMENT; kwargs...)
+    return simulate(rngs, population, strain, GLOBAL_BEHAVIOUR; kwargs...)
 end
 
 function simulate(population::Integer, strain::Union{Strain, Strains}; kwargs...)
-    return simulate([GLOBAL_RNG], population, strain, GLOBAL_ENVIRONMENT; kwargs...)
+    return simulate([GLOBAL_RNG], population, strain, GLOBAL_BEHAVIOUR; kwargs...)
 end
 
 function simulate(
     rng::AbstractRNG,
     population::Integer,
     strain::Union{Strain, Strains},
-    environment::Environment;
+    behaviour::Behaviour;
     kwargs...
 )
-    return simulate([rng], population, strain, environment; kwargs...)
+    return simulate([rng], population, strain, behaviour; kwargs...)
 end
 
 function simulate(
@@ -625,5 +625,5 @@ function simulate(
     strain::Union{Strain, Strains};
     kwargs...
 )
-    return simulate([rng], population, strain, GLOBAL_ENVIRONMENT; kwargs...)
+    return simulate([rng], population, strain, GLOBAL_BEHAVIOUR; kwargs...)
 end
