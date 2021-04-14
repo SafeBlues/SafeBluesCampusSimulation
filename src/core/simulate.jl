@@ -1,5 +1,6 @@
 using Random: AbstractRNG, Random.GLOBAL_RNG
 
+using DataStructures: BinaryMinHeap
 using Distributions: Binomial, Discrete, Gamma, Sampleable, Univariate
 using FileIO: load
 using Images: Gray
@@ -86,7 +87,7 @@ Represents the epidemic state of a virus strain within a population.
 - `susceptible::Int`: The number of susceptible individuals.
 - `infected::Int`: The number of infected individuals.
 - `recovered::Int`: The number of recovered individuals.
-- `recovery_times::Vector{Float64}`: A collection (sorted in ascending order) of recovery
+- `recovery_times::Vector{Float64}`: A collection (sorted in ascending order) of recovery  #TODO: Make Heap
     times (measured in hours from 12:00am Monday).
 
 
@@ -104,12 +105,12 @@ mutable struct State
     susceptible::Int
     infected::Int
     recovered::Int
-    recovery_times::Vector{Float64}
+    recovery_times::BinaryMinHeap{Float64}
 end
 
 function State(rng::AbstractRNG, population::Integer, strain::Strain)
     infected = rand(Binomial(population, strain.initial))
-    state = State(0, population - infected, infected, 0, [])
+    state = State(0, population - infected, infected, 0, BinaryMinHeap{Float64}())
 
     for _ in 1:infected
         schedule_recovery!(rng, state, strain)
@@ -282,12 +283,6 @@ function schedule_recovery!(rng::AbstractRNG, state::State, strain::Strain)
     end
 
     # Insert the recovery time while maintaining the order.
-    for k in 1:length(state.recovery_times)
-        if time < state.recovery_times[k]
-            insert!(state.recovery_times, k, time)
-            return
-        end
-    end
     push!(state.recovery_times, time)
 
     return state
@@ -359,27 +354,6 @@ function infect(
 end
 
 """
-    recover(state)
-
-Returns the number of newly recovered individuals in a single time period.
-
-**Arguments**
-- `state::State`: The epidemic state of the strain.
-"""
-function recover(state::State; mode::String="SIR")
-    recoveries = 0
-    for t in state.recovery_times
-        if t > state.time
-            break
-        end
-
-        recoveries += 1
-    end
-
-    return recoveries
-end
-
-"""
     advance!(rng, state, strain, environment, intervention)
 
 Advances the epidemic state of a virus strain forward by a single time increment.
@@ -416,11 +390,18 @@ function advance!(
             schedule_recovery!(rng, state, strain)
         end
 
-        recoveries = recover(state)
+        # Count the number of recoveries & remove them from the recovery times heap.
+        recoveries = 0
+        while length(state.recovery_times) != 0
+            time = first(state.recovery_times)
 
-        # Remove the recovery times belonging to recovered individuals.
-        for _ in 1:recoveries
-            popfirst!(state.recovery_times)
+            if time <= state.time
+                pop!(state.recovery_times)
+                recoveries += 1
+                continue
+            end
+
+            break
         end
     end
 
