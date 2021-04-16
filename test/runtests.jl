@@ -34,6 +34,19 @@ function compute_probabilities(sampler::SafeBluesCampusSimulation.CampusSampler)
     ])).(indices) / (sampler.rows * sampler.columns)
 end
 
+function estimate_probabilities(
+    sampler::SafeBluesCampusSimulation.CampusSampler;
+    N::Integer=1000000
+)
+    count = zeros(Int, sampler.rows, sampler.columns)
+    for _ in 1:N
+        i, j = (x -> Int(floor(x / sampler.scale)) + 1).(Tuple(rand(sampler)))
+        count[i, j] += 1
+    end
+
+    return count / N
+end
+
 @testset "SafeBluesCampusSimulation.jl" begin
     @testset "hour" begin
         @test SafeBluesCampusSimulation.hour(1) == 1    # 1 -> 12am -- 1am
@@ -64,15 +77,18 @@ end
         @test sampler1.columns == 2
         @test sampler1.scale == 1.0
         @test compute_probabilities(sampler1) ≈ probabilities1
+        @test isapprox(estimate_probabilities(sampler1), probabilities1, rtol=0.005)
 
         @test sampler2.rows == 5
         @test sampler2.columns == 5
         @test sampler2.scale == 3.0
         @test compute_probabilities(sampler2) ≈ probabilities2
+        @test isapprox(estimate_probabilities(sampler2), probabilities2, rtol=0.005)
 
         @test sampler3.rows == 3
         @test sampler3.columns == 7
         @test sampler3.scale == 10.0
         @test compute_probabilities(sampler3) ≈ probabilities3
+        @test isapprox(estimate_probabilities(sampler3), probabilities3, rtol=0.005)
     end
 end
