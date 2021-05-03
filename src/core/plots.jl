@@ -23,8 +23,6 @@ Plots an epidemic trajectory from the provided simulation data.
     displayed.
 - `show_infected::Bool=true`: Indicates whether the number of infected individuals is
     displayed.
-- `show_cumulative_infected::Bool=true`: Indicates whether the cumulative number of infected
-    infected individuals is displayed.
 - `show_recovered::Bool=true`: Indicates whether the number of recovered individuals is
     displayed.
 - `show_trials::Bool=true`: Indicates whether the trajectories from individual trials are
@@ -35,7 +33,6 @@ function sir_plot(
     show_susceptible::Bool=true,
     show_exposed::Bool=true,
     show_infected::Bool=true,
-    show_cumulative_infected::Bool=false,
     show_recovered::Bool=true,
     show_trials::Bool=true
 )
@@ -70,34 +67,6 @@ function sir_plot(
         push!(traces, scatter(
             x=times, y=vec(sum(data.exposed, dims=:trial)) / trials, line_color=YELLOW,
             mode="lines", name="Exposed"
-        ))
-    end
-
-    # Add the cumulative infected traces.
-    times = (0:(size(data.infected, :time) - 1)) / HOURS_IN_DAY
-    trials = size(data.infected, :trial)
-    cumulative_infected = SimulationArray(zeros(Int, size(data.infected)))
-    for trial in 1:trials
-        cumulative_infected[time=1, trial=trial] = data.infected[time=1, trial=trial]
-
-        for time in 2:(size(data.infected, :time))
-            cumulative_infected[time=time, trial=trial] = max(
-                data.infected[time=time, trial=trial],
-                cumulative_infected[time=(time - 1), trial=trial]
-            )
-        end
-    end
-
-    if show_cumulative_infected && show_trials
-        append!(traces, (scatter(
-            x=times, y=cumulative_infected[trial=trial], hoverinfo="skip",
-            line_color=YELLOW, mode="lines", opacity=OPACITY, showlegend=false
-        ) for trial in 1:trials))
-    end
-    if show_cumulative_infected
-        push!(traces, scatter(
-            x=times, y=vec(sum(cumulative_infected, dims=:trial)) / trials,
-            line_color=YELLOW, mode="lines", name="Cumulative Infected"
         ))
     end
 
