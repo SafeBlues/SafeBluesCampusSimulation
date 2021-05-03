@@ -15,7 +15,7 @@ day(time::Integer)::Int = ((time - 1) ÷ HOURS_IN_DAY) % DAYS_IN_WEEK + 1
 is_weekend(time::Integer)::Bool = day(time) == 6 || day(time) == 7
 
 """
-    Strain(initial, strength, radius, duration_mean, duration_shape)
+    Strain(initial, strength, radius, incubation_mean, incubation_shape, duration_mean, duration_shape)
 
 Stores the parameters describing the dynamics of a virus strain.
 
@@ -23,7 +23,12 @@ Stores the parameters describing the dynamics of a virus strain.
 - `initial (Float)`: The probability of initial infection.
 - `strength (Float64)`: The infection strength of the virus strain.
 - `radius (Float64)`: The maximum infection radius of the virus strain (in metres).
-- `duration_mean (Float64)`: The mean infection duration.
+- `incubation_mean (Float64)`: The mean parameter used by the gamma-distributed incubation
+    durations.
+- `incubation_shape (Float64)`: The shape parameter used by the gamma-distributed incubation
+    durations.
+- `duration_mean (Float64)`: The mean parameter used by the gamma-distributed infection
+    durations.
 - `duration_shape (Float64)`: The shape parameter used by the gamma-distributed infection
     durations.
 """
@@ -31,6 +36,8 @@ struct Strain
     initial::Float64
     strength::Float64
     radius::Float64
+    incubation_mean::Float64
+    incubation_shape::Float64
     duration_mean::Float64
     duration_shape::Float64
 end
@@ -78,17 +85,18 @@ function Strains(
 end
 
 """
-    State(time, susceptible, infected, recovered, recovery_times)
+    State(time, susceptible, exposed, infected, recovered, infection_times, recovery_times)
 
 Represents the epidemic state of a virus strain within a population.
 
 **Fields**
 - `time::Int`: The current time (measured in hours from 12:00am Monday).
 - `susceptible::Int`: The number of susceptible individuals.
+- `exposed::Int`: The number of exposed individuals.
 - `infected::Int`: The number of infected individuals.
 - `recovered::Int`: The number of recovered individuals.
-- `recovery_times::Vector{Float64}`: A collection (sorted in ascending order) of recovery  #TODO: Make Heap
-    times (measured in hours from 12:00am Monday).
+- `infection_times::Vector{Float64}`: A collection of infection times.
+- `recovery_times::Vector{Float64}`: A collection of recovery times.
 
 
     State(rng, population, strain)
@@ -103,14 +111,19 @@ Generates the initial state of a vrius strain within a population.
 mutable struct State
     time::Int
     susceptible::Int
+    exposed::Int
     infected::Int
     recovered::Int
+    infection_times::BinaryMinHeap{Float64}
     recovery_times::BinaryMinHeap{Float64}
 end
 
 function State(rng::AbstractRNG, population::Integer, strain::Strain)
     infected = rand(Binomial(population, strain.initial))
-    state = State(0, population - infected, infected, 0, BinaryMinHeap{Float64}())
+    state = State(
+        0, population - infected, 0, infected, 0, BinaryMinHeap{Float64}(),
+        BinaryMinHeap{Float64}()
+    )
 
     for _ in 1:infected
         schedule_recovery!(rng, state, strain)
@@ -260,12 +273,39 @@ end
 const DEFAULT_INTERVENTION = Intervention(0, 0, 0.0)
 
 """
+    schedule_infection!(rng, state, strain)
+
+Generates the infection time of a newly exposed individual.
+
+Inserts the new infection time into `state.infection_times`.
+
+**Arguments**
+- `rng::AbstractRNG`: A random number generator.
+- `state::State`: The epidemic state of the strain.
+- `strain::Strain`: Stores the parameters describing the virus strain.
+"""
+function schedule_infection!(rng::AbstractRNG, state::State, strain::Strain)
+    time = state.time + rand(rng, Gamma(
+        strain.incubation_shape, strain.incubation_mean / strain.incubation_shape
+    ))
+
+    # Ignore infinite incubation durations. This individual will never become infected.
+    if time == Inf
+        return state
+    end
+
+    # Insert the infection time.
+    push!(state.infection_times, time)
+
+    return state
+end
+
+"""
     schedule_recovery!(rng, state, strain)
 
 Generates the recovery time of a newly infected individual.
 
-Inserts the new recovery time into `state.recovery_times` while maintaining an ascending
-ordering.
+Inserts the new recovery time into `state.recovery_times`.
 
 **Arguments**
 - `rng::AbstractRNG`: A random number generator.
@@ -282,16 +322,16 @@ function schedule_recovery!(rng::AbstractRNG, state::State, strain::Strain)
         return state
     end
 
-    # Insert the recovery time while maintaining the order.
+    # Insert the recovery time.
     push!(state.recovery_times, time)
 
     return state
 end
 
 """
-    infect(rng, state, strain, behaviour, intervention)
+    spread(rng, state, strain, behaviour, intervention)
 
-Returns the number of newly infected individuals in a single time period.
+Returns the number of newly exposed individuals in a single time period.
 
 **Arguments**
 - `rng::AbstractRNG`: A random number generator.
@@ -301,7 +341,7 @@ Returns the number of newly infected individuals in a single time period.
 - `intervention::Intervention`: Stores the parameters describing a social distancing
     intervention.
 """
-function infect(
+function spread(
     rng::AbstractRNG,
     state::State,
     strain::Strain,
@@ -329,7 +369,7 @@ function infect(
     bound = strain.radius^2
 
     # Attempt infections between nearby individuals.
-    infections = 0
+    exposed = 0
     for _ in 1:active_susceptible
         point = rand(rng, behaviour.campus_sampler)
 
@@ -346,11 +386,11 @@ function infect(
     
         # Determine whether an infection occurs.
         if rand(rng) < p
-            infections += 1
+            exposed += 1
         end
     end
 
-    return infections
+    return exposed
 end
 
 """
@@ -371,7 +411,8 @@ epidemic state of the virus.
     intervention.
 
 **Keyword Arguments**
-- `mode::Symbol=:SIR`: Selects the epidemic model used from one of :SIR, :SI, or :SIS.
+- `mode::Symbol=:SIR`: Selects the epidemic model used from one of :SIR, :SIS, :SI, :SEIR,
+    :SEIS, or :SEI.
 """
 function advance!(
     rng::AbstractRNG,
@@ -382,42 +423,76 @@ function advance!(
     mode::Symbol=:SIR
 )
     state.time += 1
-    infections = infect(rng, state, strain, behaviour, intervention)
+    susceptible_in, exposed_in, infected_in, recovered_in = 0, 0, 0, 0
 
-    if mode == :SIR || mode == :SIS
-        # Schedule the recovery times.
-        for _ in 1:infections
-            schedule_recovery!(rng, state, strain)
-        end
+    # Handle movement out of susceptible compartment.
+    susceptible_out = spread(rng, state, strain, behaviour, intervention)
+    state.susceptible -= susceptible_out
 
-        # Count the number of recoveries & remove them from the recovery times heap.
-        recoveries = 0
-        while length(state.recovery_times) != 0
-            time = first(state.recovery_times)
-
-            if time <= state.time
-                pop!(state.recovery_times)
-                recoveries += 1
-                continue
-            end
-
-            break
-        end
+    if mode == :SIR || mode == :SIS || mode == :SI
+        infected_in += susceptible_out
+    elseif mode == :SEIR || mode == :SEIS || mode == :SEI
+        exposed_in += susceptible_out
+    else
+        throw(ArgumentError("invalid mode '$mode'"))
     end
 
-    state.susceptible -= infections
-    state.infected += infections
-    
-    if mode == :SIR
-        state.infected -= recoveries
-        state.recovered += recoveries
-    elseif mode == :SIS
-        state.infected -= recoveries
-        state.susceptible += recoveries
+    # Handle movement into exposed compartment.
+    state.exposed += exposed_in
+    for _ in 1:exposed_in
+        schedule_infection!(rng, state, strain)
+    end
+
+    # Handle movement out of exposed compartment.
+    exposed_out = 0
+    while length(state.infection_times) != 0
+        time = first(state.infection_times)
+        if time <= state.time
+            pop!(state.infection_times)
+            exposed_out += 1
+            continue
+        end
+
+        break
+    end
+
+    infected_in += exposed_out
+    state.exposed -= exposed_out
+
+    # Handle movement into infected compartment.
+    state.infected += infected_in
+    for _ in 1:infected_in
+        schedule_recovery!(rng, state, strain)
+    end
+
+    # Handle movement out of infected compartment.
+    infected_out = 0
+    while length(state.recovery_times) != 0
+        time = first(state.recovery_times)
+        if time <= state.time
+            pop!(state.recovery_times)
+            infected_out += 1
+            continue
+        end
+
+        break
+    end
+
+    state.infected -= infected_out
+
+    if mode == :SIR || mode == :SEIR
+        state.recovered += infected_out
+    elseif mode == :SIS || mode == :SEIS
+        state.susceptible += infected_out
+    elseif mode == :SI || mode == :SEI
+        state.infected += infected_out
+    else
+        throw(ArgumentError("invalid mode '$mode'"))
     end
 
     return (
         susceptible=state.susceptible,
+        exposed=state.exposed,
         infected=state.infected,
         recovered=state.recovered
     )
@@ -427,6 +502,7 @@ SimulationArray = NamedDimsArray{(:time, :trial)}
 SimulationData = @NamedTuple begin
     population::Int
     susceptible::SimulationArray
+    exposed::SimulationArray
     infected::SimulationArray
     recovered::SimulationArray
 end
@@ -455,7 +531,8 @@ Simulates the spread of a virus strain within a population and returns `Simulati
 **Keyword Arguments**
 - `intervention::Intervention=DEFAULT_INTERVENTION`: Stores the parameters describing a
     social distancing intervention.
-- `mode::Symbol=:SIR`: Selects the epidemic model used from one of :SIR, :SI, or :SIS.
+- `mode::Symbol=:SIR`: Selects the epidemic model used from one of :SIR, :SIS, :SI, :SEIR,
+    :SEIS, or :SEI.
 - `arrivals::Integer=0`: The number of new individuals that will arrive throughout the
     simulation period.
 
@@ -492,6 +569,7 @@ function simulate(
 )::SimulationData where T <: AbstractRNG
     trials = length(rngs)
     susceptible = SimulationArray(zeros(Int, TIME_HORIZON + 1, trials))
+    exposed = SimulationArray(zeros(Int, TIME_HORIZON + 1, trials))
     infected = SimulationArray(zeros(Int, TIME_HORIZON + 1, trials))
     recovered = SimulationArray(zeros(Int, TIME_HORIZON + 1, trials))
 
@@ -504,6 +582,7 @@ function simulate(
         state = State(rngs[trial], population, strain)
 
         susceptible[time=1, trial=trial] = state.susceptible
+        exposed[time=1, trial=trial] = state.exposed
         infected[time=1, trial=trial] = state.infected
         recovered[time=1, trial=trial] = state.recovered
 
@@ -516,6 +595,7 @@ function simulate(
             advance!(rngs[trial], state, strain, behaviour, intervention; mode=mode)
 
             susceptible[time=time, trial=trial] = state.susceptible
+            exposed[time=time, trial=trial] = state.exposed
             infected[time=time, trial=trial] = state.infected
             recovered[time=time, trial=trial] = state.recovered
         end
@@ -524,6 +604,7 @@ function simulate(
     return (
         population=population + arrivals,
         susceptible=susceptible,
+        exposed=exposed,
         infected=infected,
         recovered=recovered
     )
