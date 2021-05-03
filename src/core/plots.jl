@@ -19,6 +19,8 @@ Plots an epidemic trajectory from the provided simulation data.
 **Keyword Arguments
 - `show_susceptible::Bool=true`: Indicates whether the number of susceptible individuals is
     displayed.
+- `show_exposed::Bool=true`: Indicates whether the number of exposed individuals is
+    displayed.
 - `show_infected::Bool=true`: Indicates whether the number of infected individuals is
     displayed.
 - `show_cumulative_infected::Bool=true`: Indicates whether the cumulative number of infected
@@ -31,8 +33,9 @@ Plots an epidemic trajectory from the provided simulation data.
 function sir_plot(
     data::SimulationData;
     show_susceptible::Bool=true,
+    show_exposed::Bool=true,
     show_infected::Bool=true,
-    show_cumulative_infected::Bool=true,
+    show_cumulative_infected::Bool=false,
     show_recovered::Bool=true,
     show_trials::Bool=true
 )
@@ -51,6 +54,22 @@ function sir_plot(
         push!(traces, scatter(
             x=times, y=vec(sum(data.susceptible, dims=:trial)) / trials, line_color=BLUE,
             mode="lines", name="Susceptible"
+        ))
+    end
+
+    # Add the exposed traces.
+    times = (0:(size(data.exposed, :time) - 1)) / HOURS_IN_DAY
+    trials = size(data.exposed, :trial)
+    if show_exposed && show_trials
+        append!(traces, (scatter(
+            x=times, y=data.exposed[trial=trial], hoverinfo="skip", line_color=YELLOW,
+            mode="lines", name="Exposed", opacity=OPACITY, showlegend=false
+        ) for trial in 1:trials))
+    end
+    if show_exposed
+        push!(traces, scatter(
+            x=times, y=vec(sum(data.exposed, dims=:trial)) / trials, line_color=YELLOW,
+            mode="lines", name="Exposed"
         ))
     end
 
