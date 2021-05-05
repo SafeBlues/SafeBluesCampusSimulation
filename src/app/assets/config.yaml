@@ -2,12 +2,18 @@
 model_label: "Model"
 model_value: "SIR"
 model_options:
+  - label: "SEIR"
+    value: "SEIR"
   - label: "SIR"
     value: "SIR"
-  - label: "SI"
-    value: "SI"
+  - label: "SEIS"
+    value: "SEIS"
   - label: "SIS"
     value: "SIS"
+  - label: "SEI"
+    value: "SEI"
+  - label: "SI"
+    value: "SI"
 
 # Seed Settings
 seed_label: "Seed"
@@ -60,8 +66,22 @@ infection_radius_value: 10.0
 infection_radius_start_value: 5.0
 infection_radius_stop_value: 15.0
 
-# Infection Scale Settings
-infection_mean_label: "Duration Mean"
+# Incubation Mean Settings
+incubation_mean_label: "Incubation Mean"
+incubation_mean_min: 0.0
+incubation_mean_max: 336.0
+incubation_mean_step: 0.01
+incubation_mean_value: 168.0
+
+# Incubation Shape Settings
+incubation_shape_label: "Incubation Shape"
+incubation_shape_min: 0.0
+incubation_shape_max: 20.0
+incubation_shape_step: 0.01
+incubation_shape_value: 10.0
+
+# Infection Mean Settings
+infection_mean_label: "Infection Mean"
 infection_mean_min: 0.0
 infection_mean_max: 336.0
 infection_mean_step: 0.01
@@ -71,7 +91,7 @@ infection_mean_start_value: 84.0
 infection_mean_stop_value: 252.0
 
 # Infection Shape Settings
-infection_shape_label: "Duration Shape"
+infection_shape_label: "Infection Shape"
 infection_shape_min: 0.0
 infection_shape_max: 20.0
 infection_shape_step: 0.01

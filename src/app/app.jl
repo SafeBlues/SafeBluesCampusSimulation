@@ -109,6 +109,34 @@ function main_controls()
             marks=make_marks(config["infection_radius_min"], config["infection_radius_max"])
         ),
 
+        # Incubation Duration Mean
+        html_p(className="label", config["incubation_mean_label"]),
+        dcc_input(
+            id="incubation-mean-input", className="input-box", type="number",
+            min=config["incubation_mean_min"], value=config["incubation_mean_value"]
+        ),
+        dcc_slider(
+            id="incubation-mean-slider", className="slider",
+            min=config["incubation_mean_min"], max=config["incubation_mean_max"],
+            step=config["incubation_mean_step"],
+            value=config["incubation_mean_value"],
+            marks=make_marks(config["incubation_mean_min"], config["incubation_mean_max"])
+        ),
+
+        # Incubation Duration Shape
+        html_p(className="label", config["incubation_shape_label"]),
+        dcc_input(
+            id="incubation-shape-input", className="input-box", type="number",
+            min=config["incubation_shape_min"], value=config["incubation_shape_value"]
+        ),
+        dcc_slider(
+            id="incubation-shape-slider", className="slider",
+            min=config["incubation_shape_min"], max=config["incubation_shape_max"],
+            step=config["incubation_shape_step"],
+            value=config["incubation_shape_value"],
+            marks=make_marks(config["incubation_shape_min"], config["incubation_shape_max"])
+        ),
+
         # Infection Duration Mean
         html_p(className="label", config["infection_mean_label"]),
         dcc_input(
@@ -367,6 +395,8 @@ end
 sync_slider("infection-initial-input", "infection-initial-slider")
 sync_slider("infection-strength-input", "infection-strength-slider")
 sync_slider("infection-radius-input", "infection-radius-slider")
+sync_slider("incubation-mean-input", "incubation-mean-slider")
+sync_slider("incubation-shape-input", "incubation-shape-slider")
 sync_slider("infection-mean-input", "infection-mean-slider")
 sync_slider("infection-shape-input", "infection-shape-slider")
 sync_slider("intervention-strength-input", "intervention-strength-slider")
@@ -384,7 +414,21 @@ sync_rangeslider(
     "infection-shape-start", "infection-shape-stop", "infection-shape-range"
 )
 
-# Disable the infection duration sliders when "SI" model is used.
+# Disable the incubation duration sliders when "SIR", "SIS" or "SI" model is used.
+callback!(
+    app,
+    Output("incubation-mean-input", "disabled"),
+    Output("incubation-mean-slider", "disabled"),
+    Output("incubation-shape-input", "disabled"),
+    Output("incubation-shape-slider", "disabled"),
+    Input("model-input", "value")
+) do model
+    disabled = model == "SIR" || model == "SIS" || model == "SI"
+    return (disabled, disabled, disabled, disabled)
+end
+
+
+# Disable the infection duration sliders when "SI" or "SEI" model is used.
 callback!(
     app,
     Output("infection-mean-input", "disabled"),
@@ -393,7 +437,7 @@ callback!(
     Output("infection-shape-slider", "disabled"),
     Input("model-input", "value")
 ) do model
-    disabled = model == "SI"
+    disabled = model == "SI" || model == "SEI"
     return (disabled, disabled, disabled, disabled)
 end
 
@@ -409,15 +453,16 @@ callback!(
     Input("infection-initial-input", "value"),
     Input("infection-strength-input", "value"),
     Input("infection-radius-input", "value"),
+    Input("incubation-mean-input", "value"),
+    Input("incubation-shape-input", "value"),
     Input("infection-mean-input", "value"),
     Input("infection-shape-input", "value"),
     Input("intervention-start-input", "value"),
     Input("intervention-stop-input", "value"),
     Input("intervention-strength-input", "value")
 ) do model, seed, trials, population, arrivals, infection_initial, infection_strength,
-        infection_radius, infection_mean, infection_shape, intervention_start,
-        intervention_stop,
-        intervention_strength
+        infection_radius, incubation_mean, incubation_shape, infection_mean,
+        infection_shape, intervention_start, intervention_stop, intervention_strength
     if model == "SI"
         infection_shape = 1
         infection_mean = Inf
@@ -426,12 +471,20 @@ callback!(
         model = :SIS
     elseif model == "SIR"
         model = :SIR
+    elseif model == "SEI"
+        infection_shape = 1
+        infection_mean = Inf
+        model = :SEI
+    elseif model == "SEIS"
+        model = :SEIS
+    elseif model == "SEIR"
+        model = :SEIR
     end
 
     rngs = [MersenneTwister(seed + (i - 1) * trials) for i in 1:trials]
     strain = Strain(
-        infection_initial, infection_strength, infection_radius, infection_mean,
-        infection_shape
+        infection_initial, infection_strength, infection_radius, incubation_mean,
+        incubation_shape, infection_mean, infection_shape
     )
     intervention = Intervention(intervention_start, intervention_stop, intervention_strength)
 
@@ -441,8 +494,8 @@ callback!(
 
     return sir_plot(
         data;
-        show_cumulative_infected=(model == :SIR || model == :SIS),
-        show_recovered=(model == :SIR)
+        show_exposed=(model == :SEIR || model == :SEI || model == :SEIS),
+        show_recovered=(model == :SIR || model == :SEIR)
     )
 end
 
