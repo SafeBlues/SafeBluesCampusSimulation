@@ -15,7 +15,7 @@ day(time::Integer)::Int = ((time - 1) ÷ HOURS_IN_DAY) % DAYS_IN_WEEK + 1
 is_weekend(time::Integer)::Bool = day(time) == 6 || day(time) == 7
 
 """
-    Strain(initial, strength, radius, incubation_mean, incubation_shape, duration_mean, duration_shape)
+    Strain(initial, strength, radius, incubation_mean, incubation_shape, infection_mean, infection_shape)
 
 Stores the parameters describing the dynamics of a virus strain.
 
@@ -27,9 +27,9 @@ Stores the parameters describing the dynamics of a virus strain.
     durations.
 - `incubation_shape (Float64)`: The shape parameter used by the gamma-distributed incubation
     durations.
-- `duration_mean (Float64)`: The mean parameter used by the gamma-distributed infection
+- `infection_mean (Float64)`: The mean parameter used by the gamma-distributed infection
     durations.
-- `duration_shape (Float64)`: The shape parameter used by the gamma-distributed infection
+- `infection_shape (Float64)`: The shape parameter used by the gamma-distributed infection
     durations.
 """
 struct Strain
@@ -38,12 +38,12 @@ struct Strain
     radius::Float64
     incubation_mean::Float64
     incubation_shape::Float64
-    duration_mean::Float64
-    duration_shape::Float64
+    infection_mean::Float64
+    infection_shape::Float64
 end
 
 """
-    Strains(initial, strength, radius, duration_mean, duration_shape)
+    Strains(initial, strength, radius, infection_mean, infection_shape)
 
 Stores the parameters describing the dynamics of multiple virus strains.
 
@@ -51,8 +51,8 @@ Stores the parameters describing the dynamics of multiple virus strains.
 - `initial (Vector{Float64}): The probabilities of initial infection.
 - `strength (Vector{Float64})`: The infection strengths of the virus strains.
 - `radius (Vector{Float64})`: The maximum infection radii of the virus strains (in metres).
-- `duration_mean (Vector{Float64})`: The mean infection duration.
-- `duration_shape (Vector{Float64})`: The shape parameters used by the gamma-distributed
+- `infection_mean (Vector{Float64})`: The mean infection duration.
+- `infection_shape (Vector{Float64})`: The shape parameters used by the gamma-distributed
     infection durations.
 
 Alternatively, when any argument is replaced by a `Float64` instead of `Vector{Float64}`,
@@ -62,16 +62,16 @@ struct Strains
     initial::Vector{Float64}
     strength::Vector{Float64}
     radius::Vector{Float64}
-    duration_mean::Vector{Float64}
-    duration_shape::Vector{Float64}
+    infection_mean::Vector{Float64}
+    infection_shape::Vector{Float64}
 end
 
 function Strains(
     initial::Union{Real, Vector{T}},
     strength::Union{Real, Vector{T}},
     radius::Union{Real, Vector{T}},
-    duration_mean::Union{Real, Vector{T}},
-    duration_shape::Union{Real, Vector{T}}
+    infection_mean::Union{Real, Vector{T}},
+    infection_shape::Union{Real, Vector{T}}
 ) where T <: Real
     make_vector(x) = Float64.(x isa Real ? [x] : x)
 
@@ -79,8 +79,8 @@ function Strains(
         make_vector(initial),
         make_vector(strength),
         make_vector(radius),
-        make_vector(duration_mean),
-        make_vector(duration_shape)
+        make_vector(infection_mean),
+        make_vector(infection_shape)
     )
 end
 
@@ -314,7 +314,7 @@ Inserts the new recovery time into `state.recovery_times`.
 """
 function schedule_recovery!(rng::AbstractRNG, state::State, strain::Strain)
     time = state.time + rand(rng, Gamma(
-        strain.duration_shape, strain.duration_mean / strain.duration_shape
+        strain.infection_shape, strain.infection_mean / strain.infection_shape
     ))
 
     # Ignore infinite infections durations. This individual will never recover.
@@ -507,7 +507,7 @@ SimulationData = @NamedTuple begin
     recovered::SimulationArray
 end
 
-ParametricArray = NamedDimsArray{(:time, :trial, :initial, :strength, :radius, :duration_mean, :duration_shape)}
+ParametricArray = NamedDimsArray{(:time, :trial, :initial, :strength, :radius, :infection_mean, :infection_shape)}
 ParametricData = @NamedTuple begin
     population::Int
     strains::Strains
@@ -623,25 +623,25 @@ function simulate(
 
     susceptible = ParametricArray(zeros(
         Int, TIME_HORIZON + 1, trials, length(strains.initial), length(strains.strength),
-        length(strains.radius), length(strains.duration_mean),
-        length(strains.duration_shape)
+        length(strains.radius), length(strains.infection_mean),
+        length(strains.infection_shape)
     ))
     infected = ParametricArray(zeros(
         Int, TIME_HORIZON + 1, trials, length(strains.initial), length(strains.strength),
-        length(strains.radius), length(strains.duration_mean),
-        length(strains.duration_shape)
+        length(strains.radius), length(strains.infection_mean),
+        length(strains.infection_shape)
     ))
     recovered = ParametricArray(zeros(
         Int, TIME_HORIZON + 1, trials, length(strains.initial), length(strains.strength),
-        length(strains.radius), length(strains.duration_mean),
-        length(strains.duration_shape)
+        length(strains.radius), length(strains.infection_mean),
+        length(strains.infection_shape)
     ))
 
     for (i, initial) in enumerate(strains.initial),
             (j, strength) in enumerate(strains.strength),
             (k, radius) in enumerate(strains.radius),
-            (h, mean) in enumerate(strains.duration_mean),
-            (l, shape) in enumerate(strains.duration_shape)
+            (h, mean) in enumerate(strains.infection_mean),
+            (l, shape) in enumerate(strains.infection_shape)
         strain = Strain(initial, strength, radius, mean, shape)
         data = simulate(
             rngs, population, strain, behaviour, intervention=intervention, mode=mode,
@@ -649,13 +649,13 @@ function simulate(
         )
 
         susceptible[
-            initial=i, strength=j, radius=k, duration_mean=h, duration_shape=l
+            initial=i, strength=j, radius=k, infection_mean=h, infection_shape=l
         ] = data.susceptible
         infected[
-            initial=i, strength=j, radius=k, duration_mean=h, duration_shape=l
+            initial=i, strength=j, radius=k, infection_mean=h, infection_shape=l
         ] = data.infected
         recovered[
-            initial=i, strength=j, radius=k, duration_mean=h, duration_shape=l
+            initial=i, strength=j, radius=k, infection_mean=h, infection_shape=l
         ] = data.recovered
     end
 
