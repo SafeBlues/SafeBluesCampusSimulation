@@ -1,6 +1,6 @@
 # Model Settings
 model_label: "Model"
-model_value: "SIR"
+model_value: "SEIR"
 model_options:
   - label: "SEIR"
     value: "SEIR"
