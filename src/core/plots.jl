@@ -108,6 +108,56 @@ function sir_plot(
     return Plot(traces, layout)
 end
 
+"""
+    duration_plot(strain)
+
+Draws the probability density function of the incubation and infection durations.
+
+**Arguments**
+- `strain::Strain`: The strain whose incubaton and infection durations are to be plotted.
+
+**Keyword Arguments**
+- `show_incubation::Bool`: Indicates whether to show the probability density function of
+    the incubation duration.
+- `show_infection::Bool`: Indicates whether to show the probability density function of
+    the infection duration.
+"""
+function duration_plot(strain::Strain; show_incubation=true, show_infection=true)
+    incubation = Gamma(
+        strain.incubation_shape, strain.incubation_mean / strain.incubation_shape
+    )
+    infection = Gamma(
+        strain.infection_shape, strain.infection_mean / strain.infection_shape
+    )
+
+    stop = max(
+        quantile(incubation, 0.95) * show_incubation, 
+        quantile(infection, 0.95) * show_infection
+    )
+    x = range(0, stop=stop, length=100)
+    traces::Vector{AbstractTrace} = []
+    
+    if show_incubation
+        push!(traces, scatter(
+            x=x, y=pdf(incubation, x), line_color=YELLOW, mode="lines",
+            name="Incubation Duration"
+        ))
+    end
+
+    if show_infection
+        push!(traces, scatter(
+            x=x, y=pdf(infection, x), line_color=RED, mode="lines",
+            name="Infection Duration"
+        ))
+    end
+
+    layout = Layout(
+        xaxis_title="Duration (hours)",
+        yaxis_title="Probability Density"
+    )
+
+    return Plot(traces, layout)
+end
 
 const parameter_labels = Dict(
     :initial => "Initial Infection Chance",
