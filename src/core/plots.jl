@@ -109,6 +109,31 @@ function sir_plot(
 end
 
 """
+    infection_probability_plot(strain)
+
+Draws the infection probability function for the virus strain.
+
+**Arguments**
+- `strain::Strain`: The strain whose infection probability function is to be plotted.
+"""
+function infection_probability_plot(strain::Strain)
+    x = range(0, stop=strain.radius, length=100)
+    y = (x -> infection_probability(strain.strength, strain.radius, x)).(x)
+
+    traces = [
+        scatter(x=x, y=y, line_color=RED, mode="lines", name="Infection Probability")
+    ]
+
+    layout = Layout(
+        showlegend=true,
+        xaxis_title="Distance (metres)",
+        yaxis_title="Probability Density"
+    )
+
+    return Plot(traces, layout)
+end
+
+"""
     duration_plot(strain)
 
 Draws the probability density function of the incubation and infection durations.
@@ -136,7 +161,7 @@ function duration_plot(strain::Strain; show_incubation=true, show_infection=true
     )
     x = range(0, stop=stop, length=100)
     traces::Vector{AbstractTrace} = []
-    
+
     if show_incubation
         push!(traces, scatter(
             x=x, y=pdf(incubation, x), line_color=YELLOW, mode="lines",
