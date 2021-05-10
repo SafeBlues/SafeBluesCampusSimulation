@@ -1,3 +1,4 @@
+using Distributions: quantile, pdf
 using NamedDims: unname
 using PlotlyJS: AbstractTrace, Layout, Plot, attr, scatter, surface
 
