@@ -329,6 +329,20 @@ function schedule_recovery!(rng::AbstractRNG, state::State, strain::Strain)
 end
 
 """
+    infection_probability(strength, radius, distance)
+
+Returns the probability of infection.
+
+**Arguments**
+- `strength::Float64`: The virus strain's infection strength.
+- `radius::Float64`: The virus strain's infection radius.
+- `distance::Float64`: The distance between the susceptible and infected individual.
+"""
+function infection_probability(strength::Float64, radius::Float64, distance::Float64)
+    return 1 - exp(-strength * (1 - distance / radius))
+end
+
+"""
     spread(rng, state, strain, behaviour, intervention)
 
 Returns the number of newly exposed individuals in a single time period.
@@ -380,7 +394,7 @@ function spread(
                 continue
             end
 
-            q = 1 - exp(-strength * (1 - √distance / strain.radius))
+            q = infection_probability(strength, strain.radius, √distance)
             p = p + q - p * q
         end
     
