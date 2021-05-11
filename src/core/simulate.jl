@@ -51,7 +51,10 @@ Stores the parameters describing the dynamics of multiple virus strains.
 - `initial (Vector{Float64}): The probabilities of initial infection.
 - `strength (Vector{Float64})`: The infection strengths of the virus strains.
 - `radius (Vector{Float64})`: The maximum infection radii of the virus strains (in metres).
-- `infection_mean (Vector{Float64})`: The mean infection duration.
+- `incubation_mean (Vector{Float64}`: The mean incubation durations.
+- `incubation_shape (Vector{Float64}`: The shape parameters used by the gamma-distributed
+    incubation durations.
+- `infection_mean (Vector{Float64})`: The mean infection durations.
 - `infection_shape (Vector{Float64})`: The shape parameters used by the gamma-distributed
     infection durations.
 
@@ -62,6 +65,8 @@ struct Strains
     initial::Vector{Float64}
     strength::Vector{Float64}
     radius::Vector{Float64}
+    incubation_mean::Union{Real, Vector{T}}
+    incubation_shape::Union{Real, Vector{T}}
     infection_mean::Vector{Float64}
     infection_shape::Vector{Float64}
 end
@@ -70,6 +75,8 @@ function Strains(
     initial::Union{Real, Vector{T}},
     strength::Union{Real, Vector{T}},
     radius::Union{Real, Vector{T}},
+    incubation_mean::Union{Real, Vector{T}},
+    incubation_shape::Union{Real, Vector{T}},
     infection_mean::Union{Real, Vector{T}},
     infection_shape::Union{Real, Vector{T}}
 ) where T <: Real
@@ -79,6 +86,8 @@ function Strains(
         make_vector(initial),
         make_vector(strength),
         make_vector(radius),
+        make_vector(incubation_mean),
+        make_vector(incubation_shape),
         make_vector(infection_mean),
         make_vector(infection_shape)
     )
@@ -521,12 +530,13 @@ SimulationData = @NamedTuple begin
     recovered::SimulationArray
 end
 
-ParametricArray = NamedDimsArray{(:time, :trial, :initial, :strength, :radius, :infection_mean, :infection_shape)}
+ParametricArray = NamedDimsArray{(:time, :trial, :initial, :strength, :radius, :incubation_mean, :incubation_shape, :infection_mean, :infection_shape)}
 ParametricData = @NamedTuple begin
     population::Int
     strains::Strains
 
     susceptible::ParametricArray
+    exposed::ParametricArray
     infected::ParametricArray
     recovered::ParametricArray
 end
@@ -637,39 +647,60 @@ function simulate(
 
     susceptible = ParametricArray(zeros(
         Int, TIME_HORIZON + 1, trials, length(strains.initial), length(strains.strength),
-        length(strains.radius), length(strains.infection_mean),
+        length(strains.radius), length(strains.incubation_mean),
+        length(strains.incubation_shape), length(strains.infection_mean),
+        length(strains.infection_shape)
+    ))
+    exposed = ParametricArray(zeros(
+        Int, TIME_HORIZON + 1, trials, length(strains.initial), length(strains.strength),
+        length(strains.radius), length(strains.incubation_mean),
+        length(strains.incubation_shape), length(strains.infection_mean),
         length(strains.infection_shape)
     ))
     infected = ParametricArray(zeros(
         Int, TIME_HORIZON + 1, trials, length(strains.initial), length(strains.strength),
-        length(strains.radius), length(strains.infection_mean),
+        length(strains.radius), length(strains.incubation_mean),
+        length(strains.incubation_shape), length(strains.infection_mean),
         length(strains.infection_shape)
     ))
     recovered = ParametricArray(zeros(
         Int, TIME_HORIZON + 1, trials, length(strains.initial), length(strains.strength),
-        length(strains.radius), length(strains.infection_mean),
+        length(strains.radius), length(strains.incubation_mean),
+        length(strains.incubation_shape), length(strains.infection_mean),
         length(strains.infection_shape)
     ))
 
     for (i, initial) in enumerate(strains.initial),
             (j, strength) in enumerate(strains.strength),
             (k, radius) in enumerate(strains.radius),
-            (h, mean) in enumerate(strains.infection_mean),
-            (l, shape) in enumerate(strains.infection_shape)
-        strain = Strain(initial, strength, radius, mean, shape)
+            (m, incubation_mean) in enumerate(strains.incubation_mean),
+            (n, incubation_shape) in enumerate(strains.incubation_shape),
+            (h, infection_mean) in enumerate(strains.infection_mean),
+            (l, infection_shape) in enumerate(strains.infection_shape)
+        strain = Strain(
+            initial, strength, radius,incubation_mean, incubation_shape, infection_mean,
+            infection_shape
+        )
         data = simulate(
             rngs, population, strain, behaviour, intervention=intervention, mode=mode,
             arrivals=arrivals
         )
 
         susceptible[
-            initial=i, strength=j, radius=k, infection_mean=h, infection_shape=l
+            initial=i, strength=j, radius=k, incubation_mean=m, incubation_shape=n,
+            infection_mean=h, infection_shape=l
         ] = data.susceptible
+        exposed[
+            initial=i, strength=j, radius=k, incubation_mean=m, incubation_shape=n,
+            infection_mean=h, infection_shape=l
+        ] = data.exposed
         infected[
-            initial=i, strength=j, radius=k, infection_mean=h, infection_shape=l
+            initial=i, strength=j, radius=k, incubation_mean=m, incubation_shape=n,
+            infection_mean=h, infection_shape=l
         ] = data.infected
         recovered[
-            initial=i, strength=j, radius=k, infection_mean=h, infection_shape=l
+            initial=i, strength=j, radius=k, incubation_mean=m, incubation_shape=n,
+            infection_mean=h, infection_shape=l
         ] = data.recovered
     end
 
