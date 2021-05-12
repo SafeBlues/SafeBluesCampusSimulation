@@ -160,8 +160,8 @@ function duration_plot(strain::Strain; show_incubation=true, show_infection=true
     )
 
     stop = max(
-        quantile(incubation, 0.95) * show_incubation, 
-        quantile(infection, 0.95) * show_infection
+        quantile(incubation, 0.99) * show_incubation, 
+        quantile(infection, 0.99) * show_infection
     )
     x = range(0, stop=stop, length=100)
     traces::Vector{AbstractTrace} = []
