@@ -209,10 +209,24 @@ function draw_sir_plot()
     end
 end
 
+function draw_infection_probability_plot()
+    return html_div(id="infection-probability-plot-card", className="card") do
+        dcc_graph(id="infection-probability-plot")
+    end
+end
+
+function draw_duration_plot()
+    return html_div(id="duration-plot-card", className="card") do
+        dcc_graph(id="duration-plot")
+    end
+end
+
 function app_layout()
     return html_div(className="app-grid") do
         app_header(),
         main_controls(),
+        draw_infection_probability_plot(),
+        draw_duration_plot(),
         draw_sir_plot()
     end
 end
@@ -279,10 +293,12 @@ callback!(
     return (disabled, disabled, disabled, disabled)
 end
 
-# Connect the parameter inputs to the plot.
+# Connect the parameter inputs to the plots.
 callback!(
     app,
     Output("sir-plot", "figure"),
+    Output("infection-probability-plot", "figure"),
+    Output("duration-plot", "figure"),
     Input("model-input", "value"),
     Input("seed-input", "value"),
     Input("trials-input", "value"),
@@ -330,9 +346,16 @@ callback!(
         rngs, population, strain; intervention=intervention, mode=model, arrivals=arrivals
     )
 
-    return sir_plot(
-        data;
-        show_exposed=(model == :SEIR || model == :SEI || model == :SEIS),
-        show_recovered=(model == :SIR || model == :SEIR)
+    return (
+        sir_plot(
+            data;
+            show_exposed=(model == :SEIR || model == :SEI || model == :SEIS),
+            show_recovered=(model == :SIR || model == :SEIR)
+        ),
+        infection_probability_plot(strain),
+        duration_plot(
+            strain;
+            show_incubation=(model == :SEIR || model == :SEI || model == :SEIS)
+        )
     )
 end

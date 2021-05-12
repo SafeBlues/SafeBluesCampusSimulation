@@ -101,17 +101,19 @@ body {
 @media (min-width: 1400px) {
   #main-controls-card {
     grid-column: 1 / span 4;
+    grid-row: 2 / span 2;
   }
 
   #sir-plot-card {
     grid-column: 5 / span 8;
+    grid-row: 3 / span 2;
   }
 
-  #parametric-plot-card {
-    grid-column: 1 / span 8;
+  #infection-probability-plot-card {
+    grid-column: 5 / span 4;
   }
 
-  #parametric-controls-card {
+  #duration-plot-card {
     grid-column: 9 / span 4;
   }
 }
