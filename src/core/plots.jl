@@ -102,8 +102,10 @@ function sir_plot(
     end
 
     layout = Layout(
+        title="Simulated Epidemic Trajectories",
         xaxis_title="Time (days)", yaxis_range=(0, data.population),
-        yaxis_title="Population"
+        yaxis_title="Population",
+        legend=attr(x=1.0, y=1.0, xanchor="right", yanchor="top")
     )
 
     return Plot(traces, layout)
@@ -126,7 +128,8 @@ function infection_probability_plot(strain::Strain)
     ]
 
     layout = Layout(
-        showlegend=true,
+        title="Strand Transmission Probability",
+        showlegend=false,
         xaxis_title="Distance (metres)",
         yaxis_title="Probability Density"
     )
@@ -166,18 +169,21 @@ function duration_plot(strain::Strain; show_incubation=true, show_infection=true
     if show_incubation
         push!(traces, scatter(
             x=x, y=pdf(incubation, x), line_color=YELLOW, mode="lines",
-            name="Incubation Duration"
+            name="Incubation"
         ))
     end
 
     if show_infection
         push!(traces, scatter(
             x=x, y=pdf(infection, x), line_color=RED, mode="lines",
-            name="Infection Duration"
+            name="Infection"
         ))
     end
 
     layout = Layout(
+        title="Strand Duration Probabilities",
+        legend=attr(x=1.0, y=1.0, xanchor="right", yanchor="top"),
+        showlegend=true,
         xaxis_title="Duration (hours)",
         yaxis_title="Probability Density"
     )
@@ -212,7 +218,7 @@ Plots the total number of infections as a function of a pair of virus parameters
 - `dim1::Symbol`: The parameter to show on the x-axis.
 - `dim2::Symbol`: The parameter to show on the y-axis.
 
-The dimensions must be one of `:initial`, `:strength`, `:radius`, `duration_mean`, or
+The dimensions must be one of `:initial`, `:strength`, `:radius`, `:duration_mean`, or
 `:duration_scale`. The keyword arguments control the parameters that do not appear on the
 x-axis or y-axis.
 """
