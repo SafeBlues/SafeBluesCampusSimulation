@@ -65,8 +65,8 @@ struct Strains
     initial::Vector{Float64}
     strength::Vector{Float64}
     radius::Vector{Float64}
-    incubation_mean::Union{Real, Vector{T}}
-    incubation_shape::Union{Real, Vector{T}}
+    incubation_mean::Vector{Float64}
+    incubation_shape::Vector{Float64}
     infection_mean::Vector{Float64}
     infection_shape::Vector{Float64}
 end
