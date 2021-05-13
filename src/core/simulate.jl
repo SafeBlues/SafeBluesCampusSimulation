@@ -7,6 +7,7 @@ using Images: Gray
 using NamedDims: NamedDimsArray
 using YAML: load_file
 
+const MINUTES_IN_HOUR = 60
 const HOURS_IN_DAY = 24
 const DAYS_IN_WEEK = 7
 const TIME_HORIZON = 840
@@ -348,7 +349,7 @@ Returns the probability of infection.
 - `distance::Float64`: The distance between the susceptible and infected individual.
 """
 function infection_probability(strength::Float64, radius::Float64, distance::Float64)
-    return 1 - exp(-strength * (1 - distance / radius))
+    return 1 - exp(-strength * MINUTES_IN_HOUR * (1 - distance / radius))
 end
 
 """
@@ -491,8 +492,8 @@ function advance!(
     # Handle movement out of infected compartment.
     infected_out = 0
     while length(state.recovery_times) != 0
-        time = first(state.recovery_times)
-        if time <= state.time
+        t = first(state.recovery_times)
+        if t <= state.time
             pop!(state.recovery_times)
             infected_out += 1
             continue
@@ -708,6 +709,7 @@ function simulate(
         population=population + arrivals,
         strains=strains,
         susceptible=susceptible,
+        exposed=exposed,
         infected=infected,
         recovered=recovered
     )
