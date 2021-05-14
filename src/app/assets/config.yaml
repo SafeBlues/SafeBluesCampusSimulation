@@ -49,9 +49,9 @@ infection_initial_value: 0.1
 # Infection Strength Settings
 infection_strength_label: "Infection Strength"
 infection_strength_min: 0.0
-infection_strength_max: 2.0
-infection_strength_step: 0.01
-infection_strength_value: 1.0
+infection_strength_max: 0.1
+infection_strength_step: 0.001
+infection_strength_value: 0.05
 
 # Infection Radius Settings
 infection_radius_label: "Infection Radius"
