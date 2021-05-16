@@ -5,7 +5,7 @@ weights1 = [
     3.0 4.0;
 ]
 probabilities1 = weights1 / sum(weights1)
-sampler1 = SafeBluesCampusSimulation.CampusSampler(1.0, weights1)
+sampler1 = CampusSampler(1.0, weights1)
 
 weights2 = [
     0.0 1.0 2.0 1.0 0.0;
@@ -15,7 +15,7 @@ weights2 = [
     0.0 1.0 2.0 1.0 0.0;
 ]
 probabilities2 = weights2 / sum(weights2)
-sampler2 = SafeBluesCampusSimulation.CampusSampler(3.0, weights2)
+sampler2 = CampusSampler(3.0, weights2)
 
 weights3 = [
     10.0 20.0 10.0 30.0 10.0 20.0 10.0
@@ -23,9 +23,9 @@ weights3 = [
     10.0 20.0 10.0 30.0 10.0 20.0 10.0
 ]
 probabilities3 = weights3 / sum(weights3)
-sampler3 = SafeBluesCampusSimulation.CampusSampler(10.0, weights3)
+sampler3 = CampusSampler(10.0, weights3)
 
-function compute_probabilities(sampler::SafeBluesCampusSimulation.CampusSampler)
+function compute_probabilities(sampler::CampusSampler)
     indices = LinearIndices((sampler.rows, sampler.columns))
 
     return (i -> sampler.probabilities[i] + sum(Float64[
@@ -33,10 +33,7 @@ function compute_probabilities(sampler::SafeBluesCampusSimulation.CampusSampler)
     ])).(indices) / (sampler.rows * sampler.columns)
 end
 
-function estimate_probabilities(
-    sampler::SafeBluesCampusSimulation.CampusSampler;
-    N::Integer=1000000
-)
+function estimate_probabilities(sampler::CampusSampler; N::Integer=1000000)
     count = zeros(Int, sampler.rows, sampler.columns)
     for _ in 1:N
         i, j = (x -> Int(floor(x / sampler.scale)) + 1).(Tuple(rand(sampler)))
