@@ -260,7 +260,7 @@ function load_behaviour(behaviour_file::String, heatmap_file::String)
 end
 
 const GLOBAL_BEHAVIOUR = cd(@__DIR__) do
-    return load_behaviour("assets/behaviour.yaml", "assets/heatmap.png")
+    return load_behaviour("behaviour.yaml", "heatmap.png")
 end
 
 """
