@@ -1,10 +1,5 @@
 using DashHtmlComponents
 using DashCoreComponents
-using YAML: load_file
-
-config = cd(@__DIR__) do
-    load_file("config.yaml")
-end
 
 function make_marks(min::Real, max::Real)
     return Dict((i % 1.0 == 0 ? Int(i) : i) => "$i"
@@ -20,177 +15,238 @@ end
 function main_controls()
     return html_div(id="main-controls-card", className="card card-grid") do
         # Model Choice
-        html_p(className="label", config["model_label"]),
+        html_p(className="label", "Model"),
         dcc_dropdown(
-            id="model-input", value=config["model_value"], options=config["model_options"]
+            id="model-input",
+            value="SEIR",
+            options=[
+                Dict("label" => "SEIR", "value" => "SEIR"),
+                Dict("label" => "SIR", "value" => "SIR"),
+                Dict("label" => "SEIS", "value" => "SEIS"),
+                Dict("label" => "SIS", "value" => "SIS"),
+                Dict("label" => "SEI", "value" => "SEI"),
+                Dict("label" => "SI", "value" => "SI")
+            ]
         ),
 
         # Seed
-        html_p(className="label", config["seed_label"]),
+        html_p(className="label", "Seed"),
         dcc_input(
-            id="seed-input", className="input-box", type="number",
-            min=config["seed_min"], step=config["seed_step"], value=config["seed_value"]    
+            id="seed-input",
+            className="input-box",
+            type="number",
+            min=0,
+            step=1,
+            value=0  
         ),
 
         # Trials
-        html_p(className="label", config["trials_label"]),
+        html_p(className="label", "Trials"),
         dcc_input(
-            id="trials-input", className="input-box", type="number",
-            min=config["trials_min"], step=config["trials_step"],
-            value=config["trials_value"]
+            id="trials-input",
+            className="input-box",
+            type="number",
+            min=1,
+            step=1,
+            value=1
         ),
 
         # Population
-        html_p(className="label", config["population_label"]),
+        html_p(className="label", "Population"),
         dcc_input(
-            id="population-input", className="input-box", type="number",
-            min=config["population_min"], step=config["population_step"],
-            value=config["population_value"]
+            id="population-input",
+            className="input-box",
+            type="number",
+            min=1,
+            step=1,
+            value=1000
         ),
 
         # Arrivals
-        html_p(className="label", config["arrivals_label"]),
+        html_p(className="label", "Arrivals"),
         dcc_input(
-            id="arrivals-input", className="input-box", type="number",
-            min=config["arrivals_min"], step=config["arrivals_step"],
-            value=config["arrivals_value"]
+            id="arrivals-input",
+            className="input-box",
+            type="number",
+            min=0,
+            step=1,
+            value=0
         ),
 
         # Initial Infection Chance
-        html_p(className="label", config["infection_initial_label"]),
+        html_p(className="label", "Initial Infection"),
         dcc_input(
-            id="infection-initial-input", className="input-box", type="number",
-            min=config["infection_initial_min"], max=config["infection_initial_max"],
-            value=config["infection_initial_value"]
+            id="infection-initial-input",
+            className="input-box",
+            type="number",
+            min=0,
+            max=1,
+            value=0.1
         ),
         dcc_slider(
-            id="infection-initial-slider", className="slider",
-            min=config["infection_initial_min"], max=config["infection_initial_max"],
-            step=config["infection_initial_step"], value=config["infection_initial_value"],
-            marks=make_marks(
-                config["infection_initial_min"], config["infection_initial_max"]
-            )
+            id="infection-initial-slider",
+            className="slider",
+            min=0.0,
+            max=1.0,
+            step=0.01,
+            value=0.1,
+            marks=make_marks(0.0, 1.0)
         ),
 
         # Infection Strength
-        html_p(className="label", config["infection_strength_label"]),
+        html_p(className="label", "Infection Strength"),
         dcc_input(
-            id="infection-strength-input", className="input-box", type="number",
-            min=config["infection_strength_min"], value=config["infection_strength_value"]
+            id="infection-strength-input",
+            className="input-box",
+            type="number",
+            min=0.0, value=0.05
         ),
         dcc_slider(
-            id="infection-strength-slider", className="slider",
-            min=config["infection_strength_min"], max=config["infection_strength_max"],
-            step=config["infection_strength_step"],
-            value=config["infection_strength_value"], marks=make_marks(
-                config["infection_strength_min"], config["infection_strength_max"]
-            )
+            id="infection-strength-slider",
+            className="slider",
+            min=0.0,
+            max=0.1,
+            step=0.01,
+            value=0.05,
+            marks=make_marks(0.0, 0.1)
         ),
 
         # Infection Radius
-        html_p(className="label", config["infection_radius_label"]),
+        html_p(className="label", "Infection Radius"),
         dcc_input(
-            id="infection-radius-input", className="input-box", type="number",
-            min=config["infection_radius_min"], value=config["infection_radius_value"]
+            id="infection-radius-input",
+            className="input-box",
+            type="number",
+            min=0.0,
+            value=10.0
         ),
         dcc_slider(
-            id="infection-radius-slider", className="slider",
-            min=config["infection_radius_min"], max=config["infection_radius_max"],
-            step=config["infection_radius_step"],
-            value=config["infection_radius_value"],
-            marks=make_marks(config["infection_radius_min"], config["infection_radius_max"])
+            id="infection-radius-slider",
+            className="slider",
+            min=0.0,
+            max=20.0,
+            step=0.01,
+            value=10.0,
+            marks=make_marks(0.0, 20.0)
         ),
 
         # Incubation Duration Mean
-        html_p(className="label", config["incubation_mean_label"]),
+        html_p(className="label", "Incubation Mean"),
         dcc_input(
-            id="incubation-mean-input", className="input-box", type="number",
-            min=config["incubation_mean_min"], value=config["incubation_mean_value"]
+            id="incubation-mean-input",
+            className="input-box",
+            type="number",
+            min=0.0,
+            value=48.0
         ),
         dcc_slider(
-            id="incubation-mean-slider", className="slider",
-            min=config["incubation_mean_min"], max=config["incubation_mean_max"],
-            step=config["incubation_mean_step"],
-            value=config["incubation_mean_value"],
-            marks=make_marks(config["incubation_mean_min"], config["incubation_mean_max"])
+            id="incubation-mean-slider",
+            className="slider",
+            min=0.0,
+            max=336.0,
+            step=0.01,
+            value=48.0,
+            marks=make_marks(0.0, 336.0)
         ),
 
         # Incubation Duration Shape
-        html_p(className="label", config["incubation_shape_label"]),
+        html_p(className="label", "Incubation Shape"),
         dcc_input(
-            id="incubation-shape-input", className="input-box", type="number",
-            min=config["incubation_shape_min"], value=config["incubation_shape_value"]
+            id="incubation-shape-input",
+            className="input-box",
+            type="number",
+            min=0.0,
+            value=10.0
         ),
         dcc_slider(
-            id="incubation-shape-slider", className="slider",
-            min=config["incubation_shape_min"], max=config["incubation_shape_max"],
-            step=config["incubation_shape_step"],
-            value=config["incubation_shape_value"],
-            marks=make_marks(config["incubation_shape_min"], config["incubation_shape_max"])
+            id="incubation-shape-slider",
+            className="slider",
+            min=0.0,
+            max=20.0,
+            step=0.01,
+            value=10.0,
+            marks=make_marks(0.0, 20.0)
         ),
 
         # Infection Duration Mean
-        html_p(className="label", config["infection_mean_label"]),
+        html_p(className="label", "Infection Mean"),
         dcc_input(
-            id="infection-mean-input", className="input-box", type="number",
-            min=config["infection_mean_min"], value=config["infection_mean_value"]
+            id="infection-mean-input",
+            className="input-box",
+            type="number",
+            min=0.0,
+            value=168.0
         ),
         dcc_slider(
-            id="infection-mean-slider", className="slider",
-            min=config["infection_mean_min"], max=config["infection_mean_max"],
-            step=config["infection_mean_step"],
-            value=config["infection_mean_value"],
-            marks=make_marks(config["infection_mean_min"], config["infection_mean_max"])
+            id="infection-mean-slider",
+            className="slider",
+            min=0.0,
+            max=336.0,
+            step=0.01,
+            value=168.0,
+            marks=make_marks(0.0, 336.0)
         ),
 
         # Infection Duration Shape
-        html_p(className="label", config["infection_shape_label"]),
+        html_p(className="label", "Infection Shape"),
         dcc_input(
-            id="infection-shape-input", className="input-box", type="number",
-            min=config["infection_shape_min"], value=config["infection_shape_value"]
+            id="infection-shape-input",
+            className="input-box",
+            type="number",
+            min=0.0,
+            value=10.0
         ),
         dcc_slider(
-            id="infection-shape-slider", className="slider",
-            min=config["infection_shape_min"], max=config["infection_shape_max"],
-            step=config["infection_shape_step"],
-            value=config["infection_shape_value"],
-            marks=make_marks(config["infection_shape_min"], config["infection_shape_max"])
+            id="infection-shape-slider",
+            className="slider",
+            min=0.0,
+            max=20.0,
+            step=0.01,
+            value=10.0,
+            marks=make_marks(0.0, 20.0)
         ),
 
         # Intervention Start
-        html_p(className="label", config["intervention_start_label"]),
+        html_p(className="label", "Intervention Start"),
         dcc_input(
-            id="intervention-start-input", className="input-box", type="number",
-            min=config["intervention_start_min"], max=config["intervention_start_max"],
-            step=config["intervention_start_step"],
-            value=config["intervention_start_value"]
+            id="intervention-start-input",
+            className="input-box",
+            type="number",
+            min=0,
+            max=540,
+            step=1,
+            value=0
         ),
 
         # Intervention Stop
-        html_p(className="label", config["intervention_stop_label"]),
+        html_p(className="label", "Intervention Stop"),
         dcc_input(
-            id="intervention-stop-input", className="input-box", type="number",
-            min=config["intervention_stop_min"], max=config["intervention_stop_max"],
-            step=config["intervention_stop_step"],
-            value=config["intervention_stop_value"]
+            id="intervention-stop-input",
+            className="input-box",
+            type="number",
+            min=0,
+            max=540,
+            step=1,
+            value=0
         ),
 
         # Intervention Strength Scale
-        html_p(className="label", config["intervention_strength_label"]),
+        html_p(className="label", "Intervention Strength"),
         dcc_input(
-            id="intervention-strength-input", className="input-box", type="number",
-            min=config["intervention_strength_min"],
-            value=config["intervention_strength_value"]
+            id="intervention-strength-input",
+            className="input-box",
+            type="number",
+            min=0.0,
+            max=1.0,
+            value=0.5
         ),
         dcc_slider(
             id="intervention-strength-slider", className="slider",
-            min=config["intervention_strength_min"],
-            max=config["intervention_strength_max"],
-             step=config["intervention_strength_step"],
-            value=config["intervention_strength_value"],
-            marks=make_marks(
-                config["intervention_strength_min"], config["intervention_strength_max"]
-            )
+            min=0.0,
+            max=1.0,
+            step=0.01,
+            value=0.5,
+            marks=make_marks(0.0, 1.0)
         )
     end
 end
