@@ -80,7 +80,7 @@ body {
 .dash-dropdown {
   font-family: 'Open Sans', sans-serif;
   font-size: small;
-  grid-column: auto / span 10;
+  grid-column: auto / span 4;
   width: 90%;
 }
 

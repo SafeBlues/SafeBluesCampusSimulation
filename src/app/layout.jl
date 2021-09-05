@@ -64,18 +64,6 @@ function main_controls()
             value=250
         ),
 
-        # Arrivals
-        html_p(className="label", "Arrivals"),
-        dcc_input(
-            id="arrivals-input",
-            className="input-box",
-            type="number",
-            min=0,
-            max=500,
-            step=1,
-            value=0
-        ),
-
         # Initial Infection Chance
         html_p(className="label", "Initial Infection"),
         dcc_input(

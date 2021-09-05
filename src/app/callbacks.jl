@@ -67,7 +67,6 @@ callback!(
     Input("seed-input", "value"),
     Input("trials-input", "value"),
     Input("population-input", "value"),
-    Input("arrivals-input", "value"),
     Input("infection-initial-input", "value"),
     Input("infection-strength-input", "value"),
     Input("infection-radius-input", "value"),
@@ -78,7 +77,7 @@ callback!(
     Input("intervention-start-input", "value"),
     Input("intervention-stop-input", "value"),
     Input("intervention-strength-input", "value")
-) do model, seed, trials, population, arrivals, infection_initial, infection_strength,
+) do model, seed, trials, population, infection_initial, infection_strength,
         infection_radius, incubation_mean, incubation_shape, infection_mean,
         infection_shape, intervention_start, intervention_stop, intervention_strength
     if model == "SI"
@@ -106,9 +105,7 @@ callback!(
     )
     intervention = Intervention(intervention_start, intervention_stop, intervention_strength)
 
-    data = simulate(
-        rngs, population, strain; intervention=intervention, mode=model, arrivals=arrivals
-    )
+    data = simulate(rngs, population, strain; intervention=intervention, mode=model)
 
     return (
         sir_plot(
