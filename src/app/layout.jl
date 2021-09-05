@@ -47,6 +47,7 @@ function main_controls()
             className="input-box",
             type="number",
             min=1,
+            max=50,
             step=1,
             value=1
         ),
@@ -58,8 +59,9 @@ function main_controls()
             className="input-box",
             type="number",
             min=1,
+            max=500,
             step=1,
-            value=1000
+            value=250
         ),
 
         # Arrivals
@@ -69,6 +71,7 @@ function main_controls()
             className="input-box",
             type="number",
             min=0,
+            max=500,
             step=1,
             value=0
         ),
