@@ -15,6 +15,18 @@ body {
   padding: 1em;
 }
 
+.card h2 {
+  color: #000000;
+  font-family: 'Ubuntu', sans-serif;
+  font-weight: 500;
+  margin: 0.5em 0em;
+}
+
+.card-description {
+  color: #000000;
+  font-family: 'Open Sans', sans-serif;
+}
+
 .card-header {
   background-color: #323640;
 }
@@ -32,6 +44,11 @@ body {
   grid-template-columns: repeat(12, 1fr);
   padding: 1em;
   justify-items: center;
+}
+
+.card-grid h2 {
+  grid-column: auto / span 12;
+  width: 100%
 }
 
 /* Controls
@@ -99,21 +116,28 @@ body {
 }
 
 @media (min-width: 1400px) {
+  #description-card {
+    grid-column: 1 / span 4;
+    grid-row: 2 / span 1;
+  }
+
   #main-controls-card {
     grid-column: 1 / span 4;
-    grid-row: 2 / span 2;
+    grid-row: 3 / span 2;
   }
 
   #sir-plot-card {
     grid-column: 5 / span 8;
-    grid-row: 3 / span 2;
+    grid-row: 4 / span 1;
   }
 
   #infection-probability-plot-card {
     grid-column: 5 / span 4;
+    grid-row: 2 / span 2;
   }
 
   #duration-plot-card {
     grid-column: 9 / span 4;
+    grid-row: 2 / span 2;
   }
 }

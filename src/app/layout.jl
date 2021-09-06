@@ -12,8 +12,23 @@ function app_header()
     end
 end
 
+function description()
+    return html_div(id="description-card", className="card card-description") do
+        html_h2("About"),
+        "This is an interactive dashboard for a simple simulation designed for the ",
+        html_a("Safe Blues"; href="https://safeblues.org"),
+        " experiment at the University of Auckland's City Campus. The experiment emulates ",
+        "the spread of real-world biological diseases by having participants pass virtual ",
+        "virus-like tokens between their smartphones. This simulation serves as a method ",
+        "for guessing the 'optimal' strand parameters, which should ensure sufficient ",
+        "spread throughout the limited population."
+    end
+end
+
 function main_controls()
     return html_div(id="main-controls-card", className="card card-grid") do
+        html_h2("Controls"),
+
         # Model Choice
         html_p(className="label", "Model"),
         dcc_dropdown(
@@ -263,6 +278,7 @@ end
 function app_layout()
     return html_div(className="app-grid") do
         app_header(),
+        description(),
         main_controls(),
         draw_infection_probability_plot(),
         draw_duration_plot(),
