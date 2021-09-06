@@ -114,22 +114,30 @@ end
 """
     infection_probability_plot(strain)
 
-Draws the infection probability function for the virus strain.
+Draws the infection probability function for the virus strain with and without intervention.
 
 **Arguments**
 - `strain::Strain`: The strain whose infection probability function is to be plotted.
+- `intervention::Intervention`: The intervention that is being applied.
 """
-function infection_probability_plot(strain::Strain)
+function infection_probability_plot(strain::Strain, intervention::Intervention)
     x = range(0, stop=strain.radius, length=100)
-    y = (x -> infection_probability(strain.strength, strain.radius, x)).(x)
+    y₁ = (x -> infection_probability(strain.strength, strain.radius, x)).(x)
 
-    traces = [
-        scatter(x=x, y=y, line_color=RED, mode="lines", name="Infection Probability")
-    ]
+    traces = [scatter(x=x, y=y₁, line_color=RED, mode="lines", name="No Intervention")]
+
+    if intervention.start < intervention.stop
+        strength = strain.strength * (1.0 - intervention.strength)
+        y₂ = (x -> infection_probability(strength, strain.radius, x)).(x)
+
+        push!(traces, scatter(x=x, y=y₂, line_color=BLUE, mode="lines",
+            name="Intervention"))
+    end
 
     layout = Layout(
         title="Strand Transmission Probability",
-        showlegend=false,
+        legend=attr(x=1.0, y=1.0, xanchor="right", yanchor="top"),
+        show_legend=true,
         xaxis_title="Distance (metres)",
         yaxis_title="Probability Density"
     )

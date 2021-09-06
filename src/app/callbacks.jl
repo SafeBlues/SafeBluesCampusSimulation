@@ -113,7 +113,7 @@ callback!(
             show_exposed=(model == :SEIR || model == :SEI || model == :SEIS),
             show_recovered=(model == :SIR || model == :SEIR)
         ),
-        infection_probability_plot(strain),
+        infection_probability_plot(strain, intervention),
         duration_plot(
             strain;
             show_incubation=(model == :SEIR || model == :SEI || model == :SEIS)
