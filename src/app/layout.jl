@@ -64,7 +64,7 @@ function main_controls()
             min=1,
             max=50,
             step=1,
-            value=1
+            value=20
         ),
 
         # Population
