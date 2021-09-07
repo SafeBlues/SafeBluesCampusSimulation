@@ -3,7 +3,7 @@ using Random: AbstractRNG, Random.GLOBAL_RNG
 using DataStructures: BinaryMinHeap
 using Distributions: Binomial, Discrete, Gamma, Sampleable, Univariate
 using FileIO: load
-using Images: Gray
+using ImageMagick: Gray
 using NamedDims: NamedDimsArray
 using YAML: load_file
 
